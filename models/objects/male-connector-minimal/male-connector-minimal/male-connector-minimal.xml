@@ -1,0 +1,37 @@
+<mujoco model="male-connector-minimal">
+  <!-- <default>
+    <default class="visual">
+      <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh"/>
+    </default>
+  </default> -->
+  <asset>
+    <material name="0.596078_0.666667_0.686275_0.000000_0.000000" specular="0.0" shininess="0.0" rgba="0.5961 0.6667 0.6863 1"/>
+    <mesh file="male-connector-minimal.obj"/>
+    <mesh file="male-connector-minimal_collision_0.obj"/>
+    <mesh file="male-connector-minimal_collision_1.obj"/>
+    <mesh file="male-connector-minimal_collision_2.obj"/>
+    <mesh file="male-connector-minimal_collision_3.obj"/>
+    <mesh file="male-connector-minimal_collision_4.obj"/>
+    <mesh file="male-connector-minimal_collision_5.obj"/>
+    <mesh file="male-connector-minimal_collision_6.obj"/>
+    <mesh file="male-connector-minimal_collision_7.obj"/>
+  </asset>
+  <worldbody>
+    <!-- <body name="male-connector-minimal" pos="0 0.001 0.1" quat="0.707 0.707 0 0"> -->
+    <body name="male-connector-minimal" pos="0 -0.011 0.1" quat="0.707 0.707 0 0">
+      <freejoint/>
+      <geom material="0.596078_0.666667_0.686275_0.000000_0.000000" mesh="male-connector-minimal" class="visual"/>
+      <geom mesh="male-connector-minimal_collision_0" rgba="0.7990343555764012 0.01337688592684616 0.7684348975923024 1" class="collision"/>
+      <geom mesh="male-connector-minimal_collision_1" rgba="0.9716724395095205 0.4155773668635704 0.4891406227984333 1" class="collision"/>
+      <geom mesh="male-connector-minimal_collision_2" rgba="0.14830229256383265 0.6475927777174105 0.7338673709396254 1" class="collision"/>
+      <geom mesh="male-connector-minimal_collision_3" rgba="0.9669567561504457 0.1597578128209678 0.014474842421785983 1" class="collision"/>
+      <geom mesh="male-connector-minimal_collision_4" rgba="0.6799236025959631 0.3699565607110832 0.5072143585472161 1" class="collision"/>
+      <geom mesh="male-connector-minimal_collision_5" rgba="0.4268029638925618 0.48928493834570574 0.5899333271522715 1" class="collision"/>
+      <geom mesh="male-connector-minimal_collision_6" rgba="0.8260291399072678 0.4209205902022757 0.8043892236206673 1" class="collision"/>
+      <geom mesh="male-connector-minimal_collision_7" rgba="0.6130379479462504 0.42045031701196356 0.540917958831619 1" class="collision"/>
+    </body>
+  </worldbody>
+</mujoco>
