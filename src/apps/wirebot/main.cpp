@@ -19,6 +19,7 @@
 
 #include "redis/RedisClient.h"
 #include <iostream>
+#include <string>
 
 #include <sw/redis++/redis++.h>
 #include<redis/RedisClient.h>
@@ -27,6 +28,8 @@ using namespace sw::redis;
 #include "SaiModel.h"
 #include "SaiPrimitives.h"
 #include "timer/LoopTimer.h"
+#include "redis/RedisClient.h"
+#include "redis_keys.h"
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -38,7 +41,7 @@ using std::chrono::duration;
 using std::chrono::milliseconds;
 
 //redis client
-auto redis = Redis("tcp://127.0.0.1:6379");
+SaiCommon::RedisClient redis_client;
 
 // globals
 const string mujoco_file = std::string(URDF_PATH) + "/scenes/rizon4sgripper.xml";
@@ -50,6 +53,15 @@ std::shared_ptr<SaiPrimitives::JointTask> joint_task;
 
 const string forces = "rizon4s::sensed_forces";
 const string torques = "rizon4s::sensed_torques";
+
+const int ROBOT_GRIPPER_JOINTS = 13;
+
+Vector3d START_POS = Vector3d(0.3, 0.3, 0.3);
+Matrix3d START_ORIENTATION = (Matrix3d() << 
+    1,  0,  0,
+    0, -1,  0,
+    0,  0, -1).finished();
+int GRIPPER_START_POS = 0;
 
 // global kinematics
 Vector3d x_start;
@@ -236,11 +248,20 @@ std::vector<Vector3d> generatePointCloud(const mjModel* m, const mjData* d, cons
 
 // controller callback
 void controller_callback(const mjModel* m, mjData* d);
-void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d);
+void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d);\
+
+void init_redis() {
+    redis_client.setEigen(DESIRED_CARTESIAN_POSITION, START_POS);
+    redis_client.setEigen(DESIRED_CARTESIAN_ORIENTATION, START_ORIENTATION);
+    redis_client.setInt(DESIRED_GRIPPER_POSITION, GRIPPER_START_POS);
+}
 
 // main function
 int main(int argc, char* argv[])
 {
+
+    //connect to redis
+    redis_client.connect();
 
     // debug info
     std::cout << "Mujoco xml: " << mujoco_file << "\n";
@@ -286,6 +307,8 @@ int main(int argc, char* argv[])
     joint_task->reInitializeTask();
     x_start = robot->positionInWorld(control_link, control_point);
     std::cout << "x start: " << x_start.transpose() << std::endl;
+
+    init_redis();
 
     // Set the control callback (global)
     mjcb_control = controller_callback;
@@ -383,16 +406,24 @@ int main(int argc, char* argv[])
     return 1;
 }
 
+void update_redis(std::shared_ptr<SaiModel::SaiModel> robot) {
+    Vector3d currentPosition = motion_force_task->getCurrentPosition();
+    Matrix3d currentOrientation = motion_force_task->getCurrentOrientation();
+
+    redis_client.setEigen(CURRENT_CARTESIAN_POSITION, currentPosition);
+    redis_client.setEigen(CURRENT_CARTESIAN_ORIENTATION, currentOrientation);
+}
+
 // ---------------------------------------
 void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d) {
 
-    VectorXd robot_q(m->nq), robot_dq(m->nq);
+    VectorXd robot_q(ROBOT_GRIPPER_JOINTS), robot_dq(ROBOT_GRIPPER_JOINTS);
 
-    for (int i = 0; i < m->nq; ++i) {
+    for (int i = 0; i < ROBOT_GRIPPER_JOINTS; ++i) {
         robot_q(i) = d->qpos[i];
     }
 
-    for (int i = 0; i < m->nq; ++i) {
+    for (int i = 0; i < ROBOT_GRIPPER_JOINTS; ++i) {
         robot_dq(i) = d->qvel[i];
     }
 
@@ -402,13 +433,22 @@ void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* 
     robot->updateModel();
 }
 
-
-
 // ---------------------------------------
+// need to add safety checks to see whether the input data from redis is good
 void controller_callback(const mjModel* m, mjData* d) {
 
     // update robot state
     updateRobotState(robot, m, d);
+
+    //update redis --------------------
+    update_redis(robot);
+    //update redis ------------------------
+
+    //have code to get the goal position and orientation of the robot
+    MatrixXd g_p = redis_client.getEigen(DESIRED_CARTESIAN_POSITION);
+    Vector3d goal_position = g_p.col(0).template head<3>();
+    Matrix3d goal_orientation = redis_client.getEigen(DESIRED_CARTESIAN_ORIENTATION).topLeftCorner<3,3>();
+    int goal_gripper_pos = redis_client.getInt(DESIRED_GRIPPER_POSITION);
 
     // get time 
     double time = d->time;
@@ -425,8 +465,8 @@ void controller_callback(const mjModel* m, mjData* d) {
         // set goals 
         double freq = 1;
         double t_elapsed = time - t_wait;
-        Vector3d offset = 0.5 * Vector3d(sin(freq * t_elapsed), sin(freq * t_elapsed), sin(freq * t_elapsed));
-        motion_force_task->setGoalPosition(x_start + offset);
+        motion_force_task->setGoalPosition(goal_position);
+        motion_force_task->setGoalOrientation(goal_orientation);
 
         // compute torques 
         motion_force_task->updateTaskModel(MatrixXd::Identity(robot->dof(), robot->dof()));
@@ -437,10 +477,10 @@ void controller_callback(const mjModel* m, mjData* d) {
     }
 
     // set torques 
-    for (int i = 0; i < m->nq; ++i) {
+    for (int i = 0; i < ROBOT_GRIPPER_JOINTS; ++i) {
         d->ctrl[i] = control_torques(i);  // set actuated joint torques 
     }
 
-    d->ctrl[7] = 150; // how to control the gripper
+    d->ctrl[7] = goal_gripper_pos; // how to control the gripper
 }
 

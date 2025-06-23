@@ -1,5 +1,5 @@
 <mujoco model="rizon4sgripper">
-  <compiler angle="radian" meshdir="../objects"/>
+  <compiler angle="radian" meshdir="../objects" texturedir="assets"/>
 
   <option integrator="implicitfast"/>
 
@@ -75,6 +75,9 @@
     <mesh file="./robotiq-2f85/spring_link.stl"/>
     <mesh file="./robotiq-2f85/follower.stl"/>
     <mesh file="./robotiq-2f85/tongue.stl"/>
+
+    <texture name="tex_ground" type="2d" builtin="checker" width="512" height="512" />
+    <material name="groundplane" texture="tex_ground" texrepeat="5 5" reflectance="0.2" />
   </asset>
 
   <!-- Everything merged uptil this point -->
@@ -192,6 +195,9 @@
         </body>
       </body>
     </body>
+
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane" friction="1 0.005 0.0001" />
   </worldbody>
 
   <contact>
@@ -229,8 +235,15 @@
       gainprm="0.3137255 0 0" biasprm="0 -100 -10"/>
   </actuator>
 
+  <include file="../objects/male-connector-minimal/male-connector-minimal/male-connector-minimal.xml" />    
+  <include file="../objects/female-connector-truncated/female-connector-truncated/female-connector-truncated.xml" /> 
+
   <keyframe>
-    <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853 0 0 0 0 0 0" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 0"/>
+    <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853 0 0 0 0 0 0 0 0 0.2 1 0 0 0" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 0"/>
   </keyframe>
+
+  
+
+  
 
 </mujoco>

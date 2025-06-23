@@ -1,4 +1,5 @@
 <mujoco model="male-connector-minimal">
+  <compiler texturedir="asset"/>
   <!-- <default>
     <default class="visual">
       <geom group="2" type="mesh" contype="0" conaffinity="0"/>
@@ -21,7 +22,7 @@
   </asset>
   <worldbody>
     <!-- <body name="male-connector-minimal" pos="0 0.001 0.1" quat="0.707 0.707 0 0"> -->
-    <body name="male-connector-minimal" pos="0 -0.011 0.1" quat="0.707 0.707 0 0">
+    <body name="male-connector-minimal" pos="0.5  0.5 0.1" quat="0.707 0.707 0 0">
       <freejoint/>
       <geom material="0.596078_0.666667_0.686275_0.000000_0.000000" mesh="male-connector-minimal" class="visual"/>
       <geom mesh="male-connector-minimal_collision_0" rgba="0.7990343555764012 0.01337688592684616 0.7684348975923024 1" class="collision"/>
@@ -33,5 +34,6 @@
       <geom mesh="male-connector-minimal_collision_6" rgba="0.8260291399072678 0.4209205902022757 0.8043892236206673 1" class="collision"/>
       <geom mesh="male-connector-minimal_collision_7" rgba="0.6130379479462504 0.42045031701196356 0.540917958831619 1" class="collision"/>
     </body>
+
   </worldbody>
 </mujoco>
