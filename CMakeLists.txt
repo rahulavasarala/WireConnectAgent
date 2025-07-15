@@ -68,6 +68,23 @@ find_package(nlohmann_json 3.11.3 REQUIRED)
 # - mujoco
 find_package(mujoco REQUIRED)
 
+# - zmq
+find_library(ZeroMQ_LIBRARY
+    NAMES zmq
+    PATHS /usr/local/lib /opt/homebrew/lib
+    REQUIRED
+)
+
+# === Find cppzmq (header-only C++ binding) ===
+find_path(ZeroMQ_INCLUDE_DIR
+    NAMES zmq.hpp
+    PATHS /usr/local/include /opt/homebrew/include
+    REQUIRED
+)
+
+include_directories(${ZeroMQ_INCLUDE_DIR})
+
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -97,6 +114,7 @@ set(MUJOCO_SAI_COMMON_LIBRARIES
 	${REDIS_PLUS_PLUS_LIBRARY}
 	${SAI-PRIMITIVES_LIBRARIES}
 	mujoco::mujoco
+	${ZeroMQ_LIBRARY}
 	)
 
 set (MUJOCO_SAI_CONTROL_BINARY_DIR ${PROJECT_SOURCE_DIR}/bin)

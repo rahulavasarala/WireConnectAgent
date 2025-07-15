@@ -45,7 +45,7 @@ SaiCommon::RedisClient redis_client;
 
 // globals
 const string mujoco_file = std::string(URDF_PATH) + "/scenes/rizon4sgripper.xml";
-const string robot_file = std::string(URDF_PATH) + "/scenes/rizon4sgripper.urdf";
+const string robot_file = std::string(URDF_PATH) + "/scenes/rizon4spayload.urdf";
 const string robot_name = "rizon4s";
 std::shared_ptr<SaiModel::SaiModel> robot;
 std::shared_ptr<SaiPrimitives::MotionForceTask> motion_force_task;
@@ -54,13 +54,25 @@ std::shared_ptr<SaiPrimitives::JointTask> joint_task;
 const string forces = "rizon4s::sensed_forces";
 const string torques = "rizon4s::sensed_torques";
 
-const int ROBOT_GRIPPER_JOINTS = 13;
+const int ROBOT_GRIPPER_JOINTS = 7;
 
 Vector3d START_POS = Vector3d(0.3, 0.3, 0.3);
 Matrix3d START_ORIENTATION = (Matrix3d() << 
     1,  0,  0,
     0, -1,  0,
     0,  0, -1).finished();
+
+const VectorXd default_mjpos = [] {
+    VectorXd tmp(20); 
+    tmp << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0;
+    return tmp;
+}();
+
+const VectorXd start_vel_sat = [] {
+    VectorXd tmp(2); 
+    tmp << 1.0, 1.3;
+    return tmp;
+}();
 int GRIPPER_START_POS = 0;
 
 // global kinematics
@@ -248,12 +260,14 @@ std::vector<Vector3d> generatePointCloud(const mjModel* m, const mjData* d, cons
 
 // controller callback
 void controller_callback(const mjModel* m, mjData* d);
-void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d);\
+void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d);
 
 void init_redis() {
     redis_client.setEigen(DESIRED_CARTESIAN_POSITION, START_POS);
     redis_client.setEigen(DESIRED_CARTESIAN_ORIENTATION, START_ORIENTATION);
     redis_client.setInt(DESIRED_GRIPPER_POSITION, GRIPPER_START_POS);
+    redis_client.setBool(RESET, false);
+    redis_client.setEigen(VEL_SATURATION, start_vel_sat);
 }
 
 // main function
@@ -268,6 +282,8 @@ int main(int argc, char* argv[])
 
     char error[1000] = "Could not load binary model";
     m = mj_loadXML(mujoco_file.c_str(), 0, error, 1000);
+
+    std::cout << "error: " << error << std::endl;
 
     // make data
     d = mj_makeData(m);
@@ -294,8 +310,8 @@ int main(int argc, char* argv[])
 
     // set initial state 
     VectorXd q_init = robot->q();
-    q_init.head(13) << 0, -90, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-    q_init.head(13) *= M_PI / 180;
+    q_init.head(7) << 0, -40, 0, 90, 0, 40 , 0;
+    q_init.head(7) *= M_PI / 180;
     std::cout << "Initial joint configuration: " << q_init.transpose() << "\n";
     for (int i = 0; i < 7; ++i) {
         d->qpos[i] = q_init(i);
@@ -406,6 +422,15 @@ int main(int argc, char* argv[])
     return 1;
 }
 
+void reset_joint_positions(const mjModel* m, const mjData* d) {
+    for (int i = 0; i < ROBOT_GRIPPER_JOINTS; ++i) {
+        d->qpos[i] = default_mjpos(i);
+        d->qvel[i] = 0;
+    }
+
+    updateRobotState(robot, m, d);
+}
+
 void update_redis(std::shared_ptr<SaiModel::SaiModel> robot) {
     Vector3d currentPosition = motion_force_task->getCurrentPosition();
     Matrix3d currentOrientation = motion_force_task->getCurrentOrientation();
@@ -437,12 +462,26 @@ void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* 
 // need to add safety checks to see whether the input data from redis is good
 void controller_callback(const mjModel* m, mjData* d) {
 
+    bool reset = redis_client.getBool(RESET);
+
+    if (reset) {
+        reset_joint_positions(m,d);
+        redis_client.setBool(RESET, false);
+        return;
+    }
+
     // update robot state
     updateRobotState(robot, m, d);
 
     //update redis --------------------
     update_redis(robot);
     //update redis ------------------------
+
+    //add velocity saturation
+    MatrixXd vel_sat = redis_client.getEigen(VEL_SATURATION);
+    VectorXd velocity_sat = vel_sat.col(0).template head<2>();
+
+    motion_force_task->enableVelocitySaturation(velocity_sat(0), velocity_sat(1));
 
     //have code to get the goal position and orientation of the robot
     MatrixXd g_p = redis_client.getEigen(DESIRED_CARTESIAN_POSITION);
@@ -477,10 +516,10 @@ void controller_callback(const mjModel* m, mjData* d) {
     }
 
     // set torques 
-    for (int i = 0; i < ROBOT_GRIPPER_JOINTS; ++i) {
+    for (int i = 0; i < 7; ++i) {
         d->ctrl[i] = control_torques(i);  // set actuated joint torques 
     }
 
-    d->ctrl[7] = goal_gripper_pos; // how to control the gripper
+    d->ctrl[7] = static_cast<mjtNum>(goal_gripper_pos); // how to control the gripper
 }
 

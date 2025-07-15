@@ -368,7 +368,7 @@
     <link name="robotiq_arg2f_base_link">
       <inertial>
         <origin rpy="0 0 0" xyz="8.625E-08 -4.6583E-06 0.03145"/>
-        <mass value="0.22652"/>
+        <mass value="0.777441"/>
         <inertia ixx="0.00020005" ixy="-4.2442E-10" ixz="-2.9069E-10" iyy="0.00017832" iyz="-3.4402E-08" izz="0.00013478"/>
       </inertial>
     </link>

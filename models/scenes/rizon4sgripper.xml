@@ -235,15 +235,16 @@
       gainprm="0.3137255 0 0" biasprm="0 -100 -10"/>
   </actuator>
 
-  <include file="../objects/male-connector-minimal/male-connector-minimal/male-connector-minimal.xml" />    
-  <include file="../objects/female-connector-truncated/female-connector-truncated/female-connector-truncated.xml" /> 
+  <!-- <include file="../objects/male-connector-minimal/male-connector-minimal/male-connector-minimal.xml" />    
+  <include file="../objects/female-connector-truncated/female-connector-truncated/female-connector-truncated.xml" />  -->
+
+  <!-- <keyframe>
+    <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853 0 0 0 0 0 0 0 0 0.2 1 0 0 0" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 0"/>
+  </keyframe> -->
 
   <keyframe>
-    <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853 0 0 0 0 0 0 0 0 0.2 1 0 0 0" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 0"/>
+    <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853 0 0 0 0 0 0" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853 0"/>
   </keyframe>
 
-  
-
-  
 
 </mujoco>

@@ -1,5 +1,5 @@
 <mujoco model="rizon4s">
-  <compiler angle="radian"/>
+  <compiler angle="radian" meshdir="../objects"/>
 
   <option integrator="implicitfast"/>
 
@@ -18,14 +18,14 @@
   </default>
 
   <asset>
-    <mesh name="link0" file="link0.stl"/>
-    <mesh name="link1" file="link1.stl"/>
-    <mesh name="link2" file="link2.stl"/>
-    <mesh name="link3" file="link3.stl"/>
-    <mesh name="link4" file="link4.stl"/>
-    <mesh name="link5" file="link5.stl"/>
-    <mesh name="link6" file="link6.stl"/>
-    <mesh name="link7" file="link7.stl"/>
+    <mesh name="link0" file="./rizon4s/link0.stl"/>
+    <mesh name="link1" file="./rizon4s/link1.stl"/>
+    <mesh name="link2" file="./rizon4s/link2.stl"/>
+    <mesh name="link3" file="./rizon4s/link3.stl"/>
+    <mesh name="link4" file="./rizon4s/link4.stl"/>
+    <mesh name="link5" file="./rizon4s/link5.stl"/>
+    <mesh name="link6" file="./rizon4s/link6.stl"/>
+    <mesh name="link7" file="./rizon4s/link7.stl"/>
   </asset>
 
   <worldbody>
