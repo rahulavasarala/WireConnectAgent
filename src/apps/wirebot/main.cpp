@@ -44,7 +44,7 @@ using std::chrono::milliseconds;
 SaiCommon::RedisClient redis_client;
 
 // globals
-const string mujoco_file = std::string(URDF_PATH) + "/scenes/rizon4sgripper.xml";
+const string mujoco_file = std::string(URDF_PATH) + "/scenes/rizon4smalecon.xml";
 const string robot_file = std::string(URDF_PATH) + "/scenes/rizon4spayload.urdf";
 const string robot_name = "rizon4s";
 std::shared_ptr<SaiModel::SaiModel> robot;
@@ -63,8 +63,10 @@ Matrix3d START_ORIENTATION = (Matrix3d() <<
     0,  0, -1).finished();
 
 const VectorXd default_mjpos = [] {
-    VectorXd tmp(20); 
-    tmp << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0;
+    VectorXd tmp(7); 
+    tmp << 0.408125, -0.010506, 0.618836,
+          2.225074, -0.007734, 0.662817,
+          1.031693;
     return tmp;
 }();
 
@@ -423,10 +425,14 @@ int main(int argc, char* argv[])
 }
 
 void reset_joint_positions(const mjModel* m, const mjData* d) {
-    for (int i = 0; i < ROBOT_GRIPPER_JOINTS; ++i) {
-        d->qpos[i] = default_mjpos(i);
+
+    for (int i = 0; i < 7; i++) {
+        d->qpos[i] = default_mjpos[i];
         d->qvel[i] = 0;
     }
+    redis_client.setEigen(DESIRED_CARTESIAN_POSITION, START_POS);
+
+
 
     updateRobotState(robot, m, d);
 }
@@ -462,6 +468,19 @@ void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* 
 // need to add safety checks to see whether the input data from redis is good
 void controller_callback(const mjModel* m, mjData* d) {
 
+    //The custom code to continuously set the female connector to have a certain position
+
+
+    //Code to extract the gripper pos and male connector pose
+
+    VectorXd mcgp(ROBOT_GRIPPER_JOINTS);
+
+    for (int i = 0; i < ROBOT_GRIPPER_JOINTS; i++) {
+        mcgp[i] = d->qpos[i];
+    }
+
+    redis_client.setEigen(QPOS, mcgp);
+
     bool reset = redis_client.getBool(RESET);
 
     if (reset) {
@@ -491,7 +510,7 @@ void controller_callback(const mjModel* m, mjData* d) {
 
     // get time 
     double time = d->time;
-    double t_wait = 2;  // wait time for passive compensation -> active compensation 
+    double t_wait = 0;  // wait time for passive compensation -> active compensation 
 
     // compute control torque
 	VectorXd control_torques = VectorXd::Zero(robot->dof());
@@ -520,6 +539,32 @@ void controller_callback(const mjModel* m, mjData* d) {
         d->ctrl[i] = control_torques(i);  // set actuated joint torques 
     }
 
-    d->ctrl[7] = static_cast<mjtNum>(goal_gripper_pos); // how to control the gripper
+    if (time > 5.0 && time < 5.1) {
+        //Lets compute the key points
+        int body_id = mj_name2id(m, mjOBJ_BODY, "male-connector-minimal");
+
+        const mjtNum* pos = d->xpos + 3 * body_id;
+
+        Vector3d mcm_pos = Vector3d(pos[0], pos[1], pos[2]);
+
+        const mjtNum* xmat = d->xmat + 9 * body_id;  // Row-major 3x3 rotation matrix
+
+        // Fill Eigen matrix row by row
+        Matrix3d R;
+        R << xmat[0], xmat[1], xmat[2],
+            xmat[3], xmat[4], xmat[5],
+            xmat[6], xmat[7], xmat[8];
+
+        MatrixXd pts(3, 4);
+        pts << 0.007, 0.007, -0.007, -0.007,
+                0.0, 0.0 , 0.0, 0.0, 
+                0.0, 0.01, 0.01, 0.0;
+
+        MatrixXd world_pts = R * pts; 
+        world_pts.colwise() += mcm_pos;
+        std::cout << "origin: " << world_pts.transpose() << std::endl;
+    }
+
+    // d->ctrl[7] = static_cast<mjtNum>(goal_gripper_pos); // how to control the gripper
 }
 

@@ -12,6 +12,7 @@ const std::string DESIRED_GRIPPER_POSITION = "rizon4s::desired_gripper_position"
 const std::string RESET = "rizon4s::reset";
 
 const std::string VEL_SATURATION = "rizon4s::velocity_saturation";
+const std::string QPOS = "rizon4s::qpos";
 
 
 

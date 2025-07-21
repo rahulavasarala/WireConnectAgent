@@ -24,29 +24,25 @@ def main():
 
     # print("Starting the control simulation on the python end...")
 
+    reset()
+
     time.sleep(1)
 
-    # STATE = "IDLE"
+    STATE = "IDLE"
 
-    # offset = np.array([0, -0.005, 0])
+
 
     # setVelocitySaturation(np.array([0.2, 0.5]))
 
-    # moveToPos(np.array([0,0.5,0.12]))
+    moveToPos(np.array([0.4,0.4,0.12]))
     # time.sleep(1)
     # moveToPos(np.array([0,0.5,0.08]))
     # time.sleep(1)
     # closeGripperSmooth()
     # time.sleep(1)
-    # moveToPos(np.array([0, 0.5, 0.12]))
-    # time.sleep(1)
-    # moveToPos(np.array([0.2, 0.5, 0.12]) + offset)
-    # time.sleep(1)
-    # setVelocitySaturation(np.array([0.01, 0.5]))
-    # moveToPos(np.array([0.2, 0.5, 0.08]) + offset, max_iters=1000)
-    # time.sleep(1)
-
-    calibration_test()
+    # moveToPos(np.array([0, 0.5, 0.5]))
+   
+    # calibration_test()
 
     # while STATE != "FINISH":
     #     if STATE == "IDLE":

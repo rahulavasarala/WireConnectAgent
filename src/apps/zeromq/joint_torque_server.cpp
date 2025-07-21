@@ -72,7 +72,7 @@ int main() {
         socket.recv(request, zmq::recv_flags::none);
 
         if (request.size() != num_envs * 21 * sizeof(float)) {
-            std::cerr << "Unexpected message size: " << request.size() << std::endl;
+            std::cerr << "Unexpected message size : " << request.size() << std::endl;
             continue;
         }
 

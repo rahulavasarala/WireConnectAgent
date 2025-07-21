@@ -1,0 +1,130 @@
+<mujoco model="rizon4s">
+  <option integrator="implicitfast"/>
+  <compiler angle="radian" meshdir="../objects"/>
+
+  <default>
+    <default class="rizon4s">
+      <joint armature="0.1" damping="1"/>
+      <position inheritrange="1"/>
+      <default class="visual">
+        <geom type="mesh" group="2" contype="0" conaffinity="0"/>
+      </default>
+      <default class="collision">
+        <geom type="mesh" group="3" mass="0" density="0"/>
+      </default>
+      <site size="0.001" rgba="0.5 0.5 0.5 0.3" group="4"/>
+    </default>
+  </default>
+
+  <asset>
+    <mesh name="link0" file="./rizon4s/link0.stl"/>
+    <mesh name="link1" file="./rizon4s/link1.stl"/>
+    <mesh name="link2" file="./rizon4s/link2.stl"/>
+    <mesh name="link3" file="./rizon4s/link3.stl"/>
+    <mesh name="link4" file="./rizon4s/link4.stl"/>
+    <mesh name="link5" file="./rizon4s/link5.stl"/>
+    <mesh name="link6" file="./rizon4s/link6.stl"/>
+    <mesh name="link7" file="./rizon4s/link7.stl"/>
+
+    <material name="0.596078_0.666667_0.686275_0.000000_0.000000" specular="0.0" shininess="0.0" rgba="0.5961 0.6667 0.6863 1"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_0.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_1.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_2.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_3.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_4.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_5.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_6.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_7.obj"/>
+
+    <texture name="tex_ground" type="2d" builtin="checker" width="512" height="512" />
+    <material name="groundplane" texture="tex_ground" texrepeat="5 5" reflectance="0.2" />
+  </asset>
+
+  <worldbody>
+    <geom name="hull" type="mesh" rgba="0.7 0.7 0.7 1" mesh="link0"/>
+    <body name="link1" pos="0 0 0.155" quat="0 0 0 -1">
+      <inertial pos="0 0.01 0.15" mass="3.7" diaginertia="0.03 0.03 0.01"/>
+      <joint name="joint1" pos="0 0 0" axis="0 0 1" range="-2.7925 2.7925" actuatorfrcrange="-123 123"/>
+      <geom type="mesh" rgba="1 1 1 1" mesh="link1"/>
+      <body name="link2" pos="0 0.03 0.21">
+        <inertial pos="0 0.04 0.1" mass="2.7" diaginertia="0.02 0.02 0.01"/>
+        <joint name="joint2" pos="0 0 0" axis="0 1 0" range="-2.2689 2.2689" actuatorfrcrange="-123 123"/>
+        <geom type="mesh" rgba="1 1 1 1" mesh="link2"/>
+        <body name="link3" pos="0 0.035 0.205">
+          <inertial pos="-0.01 0 0.13" mass="2.4" diaginertia="0.01 0.01 0.01"/>
+          <joint name="joint3" pos="0 0 0" axis="0 0 1" range="-2.9671 2.9671" actuatorfrcrange="-64 64"/>
+          <geom type="mesh" rgba="1 1 1 1" mesh="link3"/>
+          <body name="link4" pos="-0.02 -0.03 0.19" quat="0 0 0 -1">
+            <inertial pos="-0.01 0.03 0.1" mass="2.4" diaginertia="0.02 0.02 0.01"/>
+            <joint name="joint4" pos="0 0 0" axis="0 1 0" range="-1.8675 2.6878" actuatorfrcrange="-64 64"/>
+            <geom type="mesh" rgba="1 1 1 1" mesh="link4"/>
+            <body name="link5" pos="-0.02 0.025 0.195" quat="0 0 0 -1">
+              <inertial pos="0 0 0.13" mass="2.4" diaginertia="0.01 0.01 0.01"/>
+              <joint name="joint5" pos="0 0 0" axis="0 0 1" range="-2.9671 2.9671" actuatorfrcrange="-39 39"/>
+              <geom type="mesh" rgba="1 1 1 1" mesh="link5"/>
+              <body name="link6" pos="0 0.03 0.19">
+                <inertial pos="0.02 0.06 0.07" mass="2.2" diaginertia="0.01 0.01 0.01"/>
+                <joint name="joint6" pos="0 0 0" axis="0 1 0" range="-1.3963 4.5379" actuatorfrcrange="-39 39"/>
+                <geom type="mesh" rgba="1 1 1 1" mesh="link6"/>
+                <body name="link7" pos="-0.015 0.073 0.11" quat="0.707107 0 -0.707107 0">
+                <site name="force_site" pos="0 0 0"/>
+                  <inertial pos="0 0 0.05" mass="1.4" diaginertia="0.1 0.1 0.1"/>
+                  <joint name="joint7" pos="0 0 0" axis="0 0 1" range="-2.9671 2.9671" actuatorfrcrange="-39 39"/>
+                  <geom type="mesh" rgba="1 1 1 1" mesh="link7"/>
+                    <!-- Add the point mass here -->
+                  <body name="point_mass_body" pos="0 0 0.15">
+                    <inertial pos="0 0 0" mass="0.893" diaginertia="0.0001 0.0001 0.0001"/>
+
+                    <geom name="point_mass_cylinder" type="cylinder"
+                        size="0.01 0.2"  
+                        rgba="1 0 0 1"     
+                        contype="0" conaffinity="0"  
+                        group="2"/>       
+
+                    <body name="male-connector-minimal" pos="0 -0.005 0.21" quat="0.707 -0.707 0 0">
+                        <geom material="0.596078_0.666667_0.686275_0.000000_0.000000" mesh="male-connector-minimal" class="visual"/>
+                        <geom mesh="male-connector-minimal_collision_0" rgba="0.7990343555764012 0.01337688592684616 0.7684348975923024 1" class="collision"/>
+                        <geom mesh="male-connector-minimal_collision_1" rgba="0.9716724395095205 0.4155773668635704 0.4891406227984333 1" class="collision"/>
+                        <geom mesh="male-connector-minimal_collision_2" rgba="0.14830229256383265 0.6475927777174105 0.7338673709396254 1" class="collision"/>
+                        <geom mesh="male-connector-minimal_collision_3" rgba="0.9669567561504457 0.1597578128209678 0.014474842421785983 1" class="collision"/>
+                        <geom mesh="male-connector-minimal_collision_4" rgba="0.6799236025959631 0.3699565607110832 0.5072143585472161 1" class="collision"/>
+                        <geom mesh="male-connector-minimal_collision_5" rgba="0.4268029638925618 0.48928493834570574 0.5899333271522715 1" class="collision"/>
+                        <geom mesh="male-connector-minimal_collision_6" rgba="0.8260291399072678 0.4209205902022757 0.8043892236206673 1" class="collision"/>
+                        <geom mesh="male-connector-minimal_collision_7" rgba="0.6130379479462504 0.42045031701196356 0.540917958831619 1" class="collision"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane" friction="1 0.005 0.0001" />
+  </worldbody>
+
+  <actuator>
+    <motor class="rizon4s" name="joint1" joint="joint1" ctrlrange="-87 87"/>
+    <motor class="rizon4s" name="joint2" joint="joint2" ctrlrange="-87 87"/>
+    <motor class="rizon4s" name="joint3" joint="joint3" ctrlrange="-87 87"/>
+    <motor class="rizon4s" name="joint4" joint="joint4" ctrlrange="-87 87"/>
+    <motor class="rizon4s" name="joint5" joint="joint5" ctrlrange="-12 12"/>
+    <motor class="rizon4s" name="joint6" joint="joint6" ctrlrange="-12 12"/>
+    <motor class="rizon4s" name="joint7" joint="joint7" ctrlrange="-12 12"/>
+  </actuator>
+
+  <sensor>
+    <force name="force_sensor" site="force_site"/>
+    <torque name="torque_sensor" site="force_site"/>
+  </sensor>
+
+  <include file="../objects/female-connector-truncated/female-connector-truncated/female-connector-truncated.xml" />
+
+  <keyframe>
+    <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853"/>
+  </keyframe>
+
+</mujoco>
