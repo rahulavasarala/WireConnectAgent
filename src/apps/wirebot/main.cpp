@@ -56,7 +56,7 @@ const string torques = "rizon4s::sensed_torques";
 
 const int ROBOT_GRIPPER_JOINTS = 7;
 
-Vector3d START_POS = Vector3d(0.3, 0.3, 0.3);
+Vector3d START_POS = Vector3d(0, 0.3, 0.3);
 Matrix3d START_ORIENTATION = (Matrix3d() << 
     1,  0,  0,
     0, -1,  0,
@@ -468,11 +468,6 @@ void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* 
 // need to add safety checks to see whether the input data from redis is good
 void controller_callback(const mjModel* m, mjData* d) {
 
-    //The custom code to continuously set the female connector to have a certain position
-
-
-    //Code to extract the gripper pos and male connector pose
-
     VectorXd mcgp(ROBOT_GRIPPER_JOINTS);
 
     for (int i = 0; i < ROBOT_GRIPPER_JOINTS; i++) {
@@ -537,32 +532,6 @@ void controller_callback(const mjModel* m, mjData* d) {
     // set torques 
     for (int i = 0; i < 7; ++i) {
         d->ctrl[i] = control_torques(i);  // set actuated joint torques 
-    }
-
-    if (time > 5.0 && time < 5.1) {
-        //Lets compute the key points
-        int body_id = mj_name2id(m, mjOBJ_BODY, "male-connector-minimal");
-
-        const mjtNum* pos = d->xpos + 3 * body_id;
-
-        Vector3d mcm_pos = Vector3d(pos[0], pos[1], pos[2]);
-
-        const mjtNum* xmat = d->xmat + 9 * body_id;  // Row-major 3x3 rotation matrix
-
-        // Fill Eigen matrix row by row
-        Matrix3d R;
-        R << xmat[0], xmat[1], xmat[2],
-            xmat[3], xmat[4], xmat[5],
-            xmat[6], xmat[7], xmat[8];
-
-        MatrixXd pts(3, 4);
-        pts << 0.007, 0.007, -0.007, -0.007,
-                0.0, 0.0 , 0.0, 0.0, 
-                0.0, 0.01, 0.01, 0.0;
-
-        MatrixXd world_pts = R * pts; 
-        world_pts.colwise() += mcm_pos;
-        std::cout << "origin: " << world_pts.transpose() << std::endl;
     }
 
     // d->ctrl[7] = static_cast<mjtNum>(goal_gripper_pos); // how to control the gripper

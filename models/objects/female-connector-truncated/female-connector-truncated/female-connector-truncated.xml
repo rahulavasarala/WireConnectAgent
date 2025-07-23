@@ -79,7 +79,7 @@
     <mesh file="female-connector-truncated_collision_66.obj"/>
   </asset>
   <worldbody>
-    <body name="female-connector-truncated" pos="0.2 0.5 0.03" quat="0 0 0 1">
+    <body name="female-connector-truncated" pos="0 0 0" quat="0 0 0 1">
       <geom material="0.498039_0.498039_0.498039_0.000000_0.000000" mesh="female-connector-truncated" class="visual"/>
       <geom mesh="female-connector-truncated_collision_0" rgba="0.24406023908045216 0.2882725435425405 0.24224156632472527 1" class="collision"/>
       <geom mesh="female-connector-truncated_collision_1" rgba="0.5139487061153281 0.6449378782206079 0.7326927404805909 1" class="collision"/>

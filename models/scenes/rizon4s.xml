@@ -1,7 +1,6 @@
 <mujoco model="rizon4s">
-  <compiler angle="radian" meshdir="../objects"/>
-
   <option integrator="implicitfast"/>
+  <compiler angle="radian" meshdir="../objects"/>
 
   <default>
     <default class="rizon4s">
@@ -26,6 +25,20 @@
     <mesh name="link5" file="./rizon4s/link5.stl"/>
     <mesh name="link6" file="./rizon4s/link6.stl"/>
     <mesh name="link7" file="./rizon4s/link7.stl"/>
+
+    <material name="0.596078_0.666667_0.686275_0.000000_0.000000" specular="0.0" shininess="0.0" rgba="0.5961 0.6667 0.6863 1"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_0.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_1.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_2.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_3.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_4.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_5.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_6.obj"/>
+    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_7.obj"/>
+
+    <texture name="tex_ground" type="2d" builtin="checker" width="512" height="512" />
+    <material name="groundplane" texture="tex_ground" texrepeat="5 5" reflectance="0.2" />
   </asset>
 
   <worldbody>
@@ -55,9 +68,11 @@
                 <joint name="joint6" pos="0 0 0" axis="0 1 0" range="-1.3963 4.5379" actuatorfrcrange="-39 39"/>
                 <geom type="mesh" rgba="1 1 1 1" mesh="link6"/>
                 <body name="link7" pos="-0.015 0.073 0.11" quat="0.707107 0 -0.707107 0">
+                <site name="force_site" pos="0 0 0"/>
                   <inertial pos="0 0 0.05" mass="1.4" diaginertia="0.1 0.1 0.1"/>
                   <joint name="joint7" pos="0 0 0" axis="0 0 1" range="-2.9671 2.9671" actuatorfrcrange="-39 39"/>
                   <geom type="mesh" rgba="1 1 1 1" mesh="link7"/>
+                    <!-- Add the point mass here -->
                 </body>
               </body>
             </body>
@@ -65,6 +80,9 @@
         </body>
       </body>
     </body>
+
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane" friction="1 0.005 0.0001" />
   </worldbody>
 
   <actuator>
@@ -76,6 +94,13 @@
     <motor class="rizon4s" name="joint6" joint="joint6" ctrlrange="-12 12"/>
     <motor class="rizon4s" name="joint7" joint="joint7" ctrlrange="-12 12"/>
   </actuator>
+
+  <sensor>
+    <force name="force_sensor" site="force_site"/>
+    <torque name="torque_sensor" site="force_site"/>
+  </sensor>
+
+  <include file="../objects/female-connector-truncated/female-connector-truncated/female-connector-truncated.xml" />
 
   <keyframe>
     <key name="home" qpos="0 0 0 -1.57079 0 1.57079 -0.7853" ctrl="0 0 0 -1.57079 0 1.57079 -0.7853"/>
