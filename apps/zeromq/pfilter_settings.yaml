@@ -1,0 +1,14 @@
+# Particle filter settings
+filter:
+  n_particles: 1000
+  filter_freq: 50
+  queue_size: 10  
+  f_low: 0.5
+  f_high: 4
+  v_low: 0.1
+  v_high: 0.7
+  f_low_add: 4
+  f_high_add: 6  
+  v_low_add: 0.02 
+  v_high_add: 0.1
+

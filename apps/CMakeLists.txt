@@ -1,2 +1,3 @@
+add_subdirectory(robot_control)
 add_subdirectory(wirebot)
 add_subdirectory(zeromq)

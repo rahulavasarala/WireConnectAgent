@@ -17,14 +17,14 @@
   </default>
 
   <asset>
-    <mesh name="link0" file="./rizon4s/link0.stl"/>
-    <mesh name="link1" file="./rizon4s/link1.stl"/>
-    <mesh name="link2" file="./rizon4s/link2.stl"/>
-    <mesh name="link3" file="./rizon4s/link3.stl"/>
-    <mesh name="link4" file="./rizon4s/link4.stl"/>
-    <mesh name="link5" file="./rizon4s/link5.stl"/>
-    <mesh name="link6" file="./rizon4s/link6.stl"/>
-    <mesh name="link7" file="./rizon4s/link7.stl"/>
+    <mesh name="link0" file="./robots/rizon4s/link0.stl"/>
+    <mesh name="link1" file="./robots/rizon4s/link1.stl"/>
+    <mesh name="link2" file="./robots/rizon4s/link2.stl"/>
+    <mesh name="link3" file="./robots/rizon4s/link3.stl"/>
+    <mesh name="link4" file="./robots/rizon4s/link4.stl"/>
+    <mesh name="link5" file="./robots/rizon4s/link5.stl"/>
+    <mesh name="link6" file="./robots/rizon4s/link6.stl"/>
+    <mesh name="link7" file="./robots/rizon4s/link7.stl"/>
 
     <material name="0.596078_0.666667_0.686275_0.000000_0.000000" specular="0.0" shininess="0.0" rgba="0.5961 0.6667 0.6863 1"/>
     <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal.obj"/>

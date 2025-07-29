@@ -1,0 +1,261 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- https://github.com/kuka-isir/iiwa_description/blob/master/urdf/iiwa14_ETHZ.xacro -->
+<robot name="iiwa14">
+
+  <link name="link0">
+    <inertial>
+      <origin xyz="-0.1 0 0.07" rpy="0 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="0.05"  ixy="0"  ixz="0" iyy="0.06" iyz="0" izz="0.03" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/visual/link_0.obj"/>
+      </geometry>
+      <material name="cream_white">
+        <color rgba="0.98 0.965 0.965 0.9" />
+      </material>
+    </visual>
+
+<!--       <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>st
+        <mesh filename="../../../model/iiwa14/meshes/collision/link_0.obj"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <link name="link1">
+    <inertial>
+      <origin xyz="-0.0035 0.001602 0.1711" rpy="0 0 0"/>
+      <mass value="3.947808"/>
+      <inertia ixx="0.004554"  ixy="0"  ixz="0" iyy="0.004542" iyz="0" izz="0.000289" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 3.1415"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/visual/link_1.obj"/>
+      </geometry>
+      <material name="cream_white">
+        <color rgba="0.98 0.965 0.965 0.9" />
+      </material>
+    </visual>
+
+<!--       <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/collision/link_1.obj"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <link name="link2">
+    <inertial>
+      <origin xyz="0.007671 0.166693 0.003551" rpy="0 0 0"/>
+      <mass value="4.502752"/>
+      <inertia ixx="0.000318"  ixy="0"  ixz="0" iyy="0.018" iyz="0" izz="0.000419" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/visual/link_2.obj"/>
+      </geometry>
+      <material name="cream_white">
+        <color rgba="0.98 0.965 0.965 0.9" />
+      </material>
+    </visual>
+
+<!--       <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/collision/link_2.obj"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <link name="link3">
+    <inertial>
+      <origin xyz="-0.002246 -0.034918 0.188978" rpy="0 0 0"/>
+      <mass value="2.455197"/>
+      <inertia ixx="0.002233"  ixy="-0.000046"  ixz="0" iyy="0.002191" iyz="0" izz="0.000725" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 3.1415"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/visual/link_3.obj"/>
+      </geometry>
+      <material name="cream_white">
+        <color rgba="0.98 0.965 0.965 0.9" />
+      </material>
+    </visual>
+
+<!--       <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/collision/link_3.obj"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <link name="link4">
+    <inertial>
+      <origin xyz="0.000196 -0.052679 0.038182" rpy="0 0 0"/>
+      <mass value="2.611550"/>
+      <inertia ixx="0.038444"  ixy="0.000880"  ixz="-0.001120" iyy="0.011437" iyz="-0.001113" izz="0.049880" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 3.1415"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/visual/link_4.obj"/>
+      </geometry>
+      <material name="cream_white">
+        <color rgba="0.98 0.965 0.965 0.9" />
+      </material>
+    </visual>
+
+<!--       <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/collision/link_4.obj"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <link name="link5">
+    <inertial>
+      <origin xyz="0.000054 -0.002367 0.004164" rpy="0 0 0"/>
+      <mass value="3.410009"/>
+      <inertia ixx="0.002769"  ixy="0"  ixz="0" iyy="0.002842" iyz="0" izz="0.000117" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/visual/link_5.obj"/>
+      </geometry>
+      <material name="cream_white">
+        <color rgba="0.98 0.965 0.965 0.9" />
+      </material>
+    </visual>
+
+<!--       <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/collision/link_5.obj"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <link name="link6">
+    <inertial>
+      <origin xyz="0.000492 0.020190 -0.027496" rpy="0 0 0"/>
+      <mass value="3.387949"/>
+      <inertia ixx="0.000500"  ixy="0"  ixz="0" iyy="0.002809" iyz="0" izz="0.002315" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/visual/link_6.obj"/>
+      </geometry>
+      <material name="cream_white">
+        <color rgba="0.98 0.965 0.965 0.9" />
+      </material>
+    </visual>
+
+<!--       <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/collision/link_6.obj"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <link name="link7">
+    <inertial>
+      <origin xyz="-0.03465 -0.023242 −0.009623" rpy="0 0 0"/>
+      <mass value="0.506172857"/> <!--this is for the MFT Pneumatisch flange-->
+      <inertia ixx="0.007946"  ixy="0.000221"  ixz="0.000294" iyy="0.010889" iyz="-0.000294" izz="0.002944" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/visual/link_7.obj"/>
+      </geometry>
+      <material name="cream_white">
+        <color rgba="0.98 0.965 0.965 0.9" />
+      </material>
+    </visual>
+
+<!--       <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../../../model/iiwa14/meshes/collision/link_7.obj"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <joint name="joint0" type="revolute">
+    <parent link="link0"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0.1575" rpy="0 0 3.1415"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.9655" upper="2.9655" effort="320" velocity="1.4827" />
+  </joint>
+
+  <joint name="joint1" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="0 0 0.2025" rpy="1.5707 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.0933" upper="2.0933" effort="320" velocity="1.4827" />
+  </joint>
+
+  <joint name="joint2" type="revolute">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <origin xyz="0 0.2045 0" rpy="1.5707 3.1415 3.1415"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.9655" upper="2.9655" effort="176" velocity="1.7444" />
+  </joint>
+
+  <joint name="joint3" type="revolute">
+    <parent link="link3"/>
+    <child link="link4"/>
+    <origin xyz="0 0 0.2155" rpy="-1.5707 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.0933" upper="2.0933" effort="176" velocity="1.3083" />
+  </joint>
+
+  <joint name="joint4" type="revolute">
+    <parent link="link4"/>
+    <child link="link5"/>
+    <origin xyz="0 -0.1845 0" rpy="1.5707 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.9655" upper="2.9655" effort="110" velocity="2.2677" />
+  </joint>
+
+  <joint name="joint5" type="revolute">
+    <parent link="link5"/>
+    <child link="link6"/>
+    <origin xyz="0 0 0.2155" rpy="1.5707 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.0933" upper="2.0933" effort="40" velocity="2.3550" />
+  </joint>
+
+  <joint name="joint6" type="revolute">
+    <parent link="link6"/>
+    <child link="link7"/>
+    <origin xyz="0 0.081 0" rpy="-1.5707 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.0527" upper="3.0527" effort="40" velocity="2.3550" />
+  </joint>
+
+</robot>

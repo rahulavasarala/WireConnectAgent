@@ -25,8 +25,8 @@
 #include<redis/RedisClient.h>
 using namespace sw::redis;
 
-#include "SaiModel.h"
-#include "SaiPrimitives.h"
+#include "Sai2Model.h"
+#include "Sai2Primitives.h"
 #include "timer/LoopTimer.h"
 #include "redis/RedisClient.h"
 #include "redis_keys.h"
@@ -41,15 +41,15 @@ using std::chrono::duration;
 using std::chrono::milliseconds;
 
 //redis client
-SaiCommon::RedisClient redis_client;
+Sai2Common::RedisClient redis_client;
 
 // globals
 const string mujoco_file = std::string(URDF_PATH) + "/scenes/rizon4smalecon.xml";
 const string robot_file = std::string(URDF_PATH) + "/scenes/rizon4spayload.urdf";
 const string robot_name = "rizon4s";
-std::shared_ptr<SaiModel::SaiModel> robot;
-std::shared_ptr<SaiPrimitives::MotionForceTask> motion_force_task;
-std::shared_ptr<SaiPrimitives::JointTask> joint_task;
+std::shared_ptr<Sai2Model::Sai2Model> robot;
+std::shared_ptr<Sai2Primitives::MotionForceTask> motion_force_task;
+std::shared_ptr<Sai2Primitives::JointTask> joint_task;
 
 const string forces = "rizon4s::sensed_forces";
 const string torques = "rizon4s::sensed_torques";
@@ -262,7 +262,7 @@ std::vector<Vector3d> generatePointCloud(const mjModel* m, const mjData* d, cons
 
 // controller callback
 void controller_callback(const mjModel* m, mjData* d);
-void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d);
+void updateRobotState(std::shared_ptr<Sai2Model::Sai2Model> robot, const mjModel* m, const mjData* d);
 
 void init_redis() {
     redis_client.setEigen(DESIRED_CARTESIAN_POSITION, START_POS);
@@ -299,16 +299,16 @@ int main(int argc, char* argv[])
     std::cout << "Joint limits disabled!" << std::endl;
 
     // create robot and controller
-    robot = std::make_shared<SaiModel::SaiModel>(robot_file, false);
+    robot = std::make_shared<Sai2Model::Sai2Model>(robot_file, false);
     std::cout << "Robot DOF: " << robot->dof() << "\n";
     std::cout << "MJ DOF: " << m->nq << "\n"; 
     std::string control_link = "link7";
     Vector3d control_point = Vector3d(0, 0, 0.224);
     Affine3d control_frame = Affine3d::Identity();
     control_frame.translation() = control_point;
-    motion_force_task = std::make_shared<SaiPrimitives::MotionForceTask>(robot, control_link, control_frame);
+    motion_force_task = std::make_shared<Sai2Primitives::MotionForceTask>(robot, control_link, control_frame);
     motion_force_task->disableInternalOtg();
-    joint_task = std::make_shared<SaiPrimitives::JointTask>(robot);
+    joint_task = std::make_shared<Sai2Primitives::JointTask>(robot);
 
     // set initial state 
     VectorXd q_init = robot->q();
@@ -437,7 +437,7 @@ void reset_joint_positions(const mjModel* m, const mjData* d) {
     updateRobotState(robot, m, d);
 }
 
-void update_redis(std::shared_ptr<SaiModel::SaiModel> robot) {
+void update_redis(std::shared_ptr<Sai2Model::Sai2Model> robot) {
     Vector3d currentPosition = motion_force_task->getCurrentPosition();
     Matrix3d currentOrientation = motion_force_task->getCurrentOrientation();
 
@@ -446,7 +446,7 @@ void update_redis(std::shared_ptr<SaiModel::SaiModel> robot) {
 }
 
 // ---------------------------------------
-void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d) {
+void updateRobotState(std::shared_ptr<Sai2Model::Sai2Model> robot, const mjModel* m, const mjData* d) {
 
     VectorXd robot_q(ROBOT_GRIPPER_JOINTS), robot_dq(ROBOT_GRIPPER_JOINTS);
 

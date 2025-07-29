@@ -1,0 +1,52 @@
+<?xml version="1.0" ?>
+
+<world name="demo_world" gravity="0 0 -9.81">
+
+	<robot name="panda">
+		<model dir="./resources" path="panda_arm.urdf" name="panda" />
+		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	</robot>
+	
+	<static_object name="Ground">
+		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+	    <visual>
+	        <origin xyz="0.0 0.0 -0.00635" rpy="0 0 0" />
+	        <geometry>
+	            <box size="3 3 0.0127" />
+	        </geometry>
+	        <material name="material">
+				<color rgba="0.2 0.2 0.2 1.0" />
+	        </material>
+	    </visual>
+		<collision>
+			<origin xyz="0.0 0.0 -0.00635" rpy="0 0 0" />
+	        <geometry>
+	            <box size="3 3 0.0127" />
+	        </geometry>
+		</collision>
+	</static_object>
+
+	<light name="light1" type="directional">
+		<position xyz="2.0 -2.0 5.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light>
+
+	<light name="light2" type="directional">
+		<position xyz="2.0 2.0 5.0" />
+		<lookat xyz="0.0 0.0 0.0" />
+	</light>
+
+	<camera name="camera_fixed">
+		<position xyz="0.56 0.56 0.6" />
+		<vertical xyz="0 0 1" />
+		<lookat xyz="0.56 0 0.1" />
+	</camera>
+
+	<camera name="camera_recording">
+		<position xyz="1.14065 -0.00550616 0.629955" />
+		<vertical xyz="-0.264868 0.0046404  0.964274" />
+		<lookat xyz="0.176393 -0.014687  0.365137" />
+	</camera>
+
+
+</world>

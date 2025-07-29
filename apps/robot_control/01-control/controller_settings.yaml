@@ -1,0 +1,145 @@
+# Controller settings 
+
+### CHANGE SETTINGS FOR TASKS 1, 2, AND 3 : Q_INIT, LOAD_CONTROL_POINT, MAX_FORCE, CONTROL_ROTATION (IF SINK CLEANING), ITEM MASS ###
+
+setup:
+  # q_init: [-1.1768,-1.07863,0.770571,-2.43178,-0.983503,3.8256,1.63483]
+  # q_init: [-1.21929,-1.32901,1.2849,-2.7041,-0.299808,3.94889,1.45441]
+  # q_init: [0.0372727,-0.78441,0.0733154,-2.20237,-0.00323688,2.10045,0.0966516]
+  # q_init: [0.00545944,-0.49377,0.0025159,-2.20128,0.00566485,2.37645,0.0120387]
+  # q_init: [0.614092,-0.639887,-0.525832,-2.31236,-0.413592,2.56349,0.272809]
+  # q_init: [0, 0, 0.16156, -1.71596, -0.0763574, 1.87953, 0]
+  # q_init: [0,-0.242264,-0.112563,-1.90509,-1.24975,1.61226,1.64213]  # bookshelf
+  # q_init: [-0.117761,0.0513441,-0.0587356,-1.56817,0.242224,1.55462,1.37664]  # sink 
+  # q_init: [-0.234881,-0.0035137,0.0930494,-1.80727,-0.00868227,1.82066,-0.081917]  # socket 
+  q_init: [-1.5263,-0.0200382,-0.0647451,1.35409,-0.00966545,-0.164816,0.110165]
+  q_mid: [0, 0, 0, -1.5, 0, 1.885, 0]
+  simulation: false
+  # device_rotation: -90
+  q_tol: 0.1
+  device_rotation: 180
+  q_tol_int: 10
+  primitive_flag: 1  # 0 is surface-surface, 1 is plug insertion, 2 is full zero moment control 
+
+camera:
+  pos_in_link: [0.053276, 0, 0.066930]  # pos in the last link 
+  # pos_in_link: [0, 0, 0.066930]  # pos in the last link 
+  # pos_in_link: [0, 0, 0.277]  # pos in the last link 
+  # rot_in_link: [0, -1, 0, 1, 0, 0, 0, 0, 1]  # fixed frame rotation from control link frame to camera frame 
+  rot_in_link: [1, 0, 0, 0, 1, 0, 0, 0, 1]  # fixed frame rotation from control link frame to camera frame
+  fov: [87, 58]  # degrees 
+
+proxy:
+  # control_point: [0, 0, 0.107 + 0.014 + 0.017 + 0.028 + 0.035 + 0.097]
+  control_point: [0, 0, 0.277]  # regular gripper
+  # control_point: [0.13, 0, 0.352]  # sponge
+  # load_control_point: [0, 0, 0.277]
+  # load_control_point: [0, 0, 0.387]  # regular book
+  # load_control_point: [0, 0, 0.347]  # side book
+  # load_control_point: [0, 0, 0.277]  # regular gripper
+  load_control_point: [0, 0, 0.277]  # plug
+  # load_control_point: [0, 0, 0.7]
+  # load_control_point: [0, 0, 0.277]
+  # load_control_point: [0, 0, 0.298]
+  # control_rotation: [0.965925926536, 0.000000000000, 0.258819045104, 0.000000000000, 1.000000000000, 0.000000000000,-0.258819045104, 0.000000000000, 0.965925926536]
+  control_rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+  sensor_point: [0, 0, 0.147]
+  kp_force: 250
+  kp_moment: 100
+  # max_force: 25  # bookshelf
+  # max_force: 10  # sponge
+  # max_force: 200  # socket
+  max_force: 200  # socket
+  # max_force: 5
+  min_force: 0
+  max_moment: 2
+  outer_radius: 0.1
+  frame_reset_time: 0.3
+  # kv_moment_to_velocity: 0.3
+  # ki_moment_to_velocity: 0.1
+  kv_moment_to_velocity: 0.1
+  ki_moment_to_velocity: 0.5
+  # kv_moment_to_velocity: 0.03  # original values 
+  # ki_moment_to_velocity: 0.12
+  zero_crossing_mode: 1
+  max_velocity: 0.4
+  moment_control_mode: 1
+  deadband_moment: 0
+  force_blending_time: 0.3
+  kv_orientation_proxy_to_angular_velocity: 10
+  max_angular_velocity_in_contact: 0.3
+  moment_gain_for_load: -1
+
+filter:
+  n_particles: 1000
+  filter_freq: 50
+  # queue_size: 10  # bookshelf
+  queue_size: 1  # plug 
+  # f_low: 1
+  f_low: 0.5
+  f_high: 4
+  # f_low: 3
+  # f_high: 6
+  # v_low: 0.01
+  # v_high: 0.07
+  v_low: 0.1
+  v_high: 0.7
+  f_low_add: 4
+  f_high_add: 6  
+  # f_low_add: 5
+  # f_high_add: 10
+  v_low_add: 0.02 
+  v_high_add: 0.1
+  # v_low_add: 0.002 
+  # v_high_add: 0.01
+
+op_space:
+  kp_pos: 100
+  kv_pos: 20
+  ki_pos: 0
+  kp_ori: 100
+  kp_ori_low: 20
+  kv_ori: 20
+  ki_ori: 0
+  # kp_force: 0.5
+  # kv_force: 15
+  # ki_force: 1.5
+  kp_force: 0.5
+  kv_force: 15
+  ki_force: 1.5
+  # kp_moment: 2.0
+  kp_moment: 2.0  # book slide
+  kv_moment: 15
+  # ki_moment: 3.0  # book slide
+  ki_moment: 5.0  # plug
+  # ki_moment: 2.0
+  bie_addition: 0.25 
+
+joint_space:
+  kp_joint: 400
+  kv_joint: 20
+  ki_joint: 100
+
+haptic:
+  pos_scale_factor: 1.5
+  # pos_scale_factor: 5
+  ori_scale_factor: 0.5
+  force_reduction: 0.4
+
+payload_estimation:
+  force_slope: 1  # N per second 
+  position_slope: 0.001  # m per second 
+  position_tol: 0.010  # m 
+  velocity_tol: 0.05  # m/s
+  wait_time: 0.2  # seconds 
+  
+object:
+  # item_mass: 0
+  # item_mass: 0.564
+  # item_mass: 0.4
+  item_mass: 0.000001 
+  item_com: [0, 0, 0.4]
+  # item_com: [0, 0, 0.40]
+  # item_inertia: [0.05, 0.05, 0.05]
+  item_inertia: [0.000005, 0.000005, 0.000005]
+  active_gripper_control: true 
