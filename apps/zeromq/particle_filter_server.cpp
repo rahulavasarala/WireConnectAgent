@@ -22,10 +22,10 @@
 
 using namespace Eigen;
 
-const std::string zeromq_server = "ipc:///tmp/zmq_pf_server";
+const std::string zeromq_server = "ipc:///tmp/zmq_fspf_server";
 const std::string yaml_file = "./resources/pfilter_settings.yaml";
 const int ROBOT_INFO = 12;  // motion command (3) + force command (3) + measured velocity (3) + measured force (3)
-const int num_envs = 5;
+const int num_envs = 1;
 int num_workers = 1;
 
 /*
@@ -316,7 +316,7 @@ int main() {
 
                     // send pfilter output
                     // force dimension, force or motion axis 
-                    getFilterOutput(pfilter_output[i].force_space_dimension, pfilter_output[i].force_or_motion_axis, filter_output + i * 4);                    
+                    getFilterOutput(pfilter_output[i].force_space_dimension, pfilter_output[i].force_or_motion_axis, filter_output + i * 4);             
                 }
             });
         }

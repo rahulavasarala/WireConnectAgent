@@ -25,8 +25,8 @@
 #include<redis/RedisClient.h>
 using namespace sw::redis;
 
-#include "Sai2Model.h"
-#include "Sai2Primitives.h"
+#include "SaiModel.h"
+#include "SaiPrimitives.h"
 #include "timer/LoopTimer.h"
 #include "redis/RedisClient.h"
 #include "redis_keys.h"

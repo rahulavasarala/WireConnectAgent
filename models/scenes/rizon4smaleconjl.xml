@@ -1,6 +1,6 @@
 <mujoco model="rizon4s">
   <option integrator="implicitfast"/>
-  <compiler angle="radian" meshdir="../objects"/>
+  <compiler angle="radian" meshdir=".."/>
 
   <default>
     <default class="rizon4s">
@@ -17,95 +17,95 @@
   </default>
 
   <asset>
-    <mesh name="link0" file="./rizon4s/link0.stl"/>
-    <mesh name="link1" file="./rizon4s/link1.stl"/>
-    <mesh name="link2" file="./rizon4s/link2.stl"/>
-    <mesh name="link3" file="./rizon4s/link3.stl"/>
-    <mesh name="link4" file="./rizon4s/link4.stl"/>
-    <mesh name="link5" file="./rizon4s/link5.stl"/>
-    <mesh name="link6" file="./rizon4s/link6.stl"/>
-    <mesh name="link7" file="./rizon4s/link7.stl"/>
+    <mesh name="link0" file="./robots/rizon4s/link0.stl"/>
+    <mesh name="link1" file="./robots/rizon4s/link1.stl"/>
+    <mesh name="link2" file="./robots/rizon4s/link2.stl"/>
+    <mesh name="link3" file="./robots/rizon4s/link3.stl"/>
+    <mesh name="link4" file="./robots/rizon4s/link4.stl"/>
+    <mesh name="link5" file="./robots/rizon4s/link5.stl"/>
+    <mesh name="link6" file="./robots/rizon4s/link6.stl"/>
+    <mesh name="link7" file="./robots/rizon4s/link7.stl"/>
 
     <material name="0.596078_0.666667_0.686275_0.000000_0.000000" specular="0.0" shininess="0.0" rgba="0.5961 0.6667 0.6863 1"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal.obj"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_0.obj"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_1.obj"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_2.obj"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_3.obj"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_4.obj"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_5.obj"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_6.obj"/>
-    <mesh file="./male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_7.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_0.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_1.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_2.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_3.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_4.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_5.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_6.obj"/>
+    <mesh file="./objects/male-connector-minimal/male-connector-minimal/male-connector-minimal_collision_7.obj"/>
 
     <material name="0.498039_0.498039_0.498039_0.000000_0.000000" specular="0.0" shininess="0.0" rgba="0.498 0.498 0.498 1"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_0.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_1.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_2.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_3.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_4.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_5.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_6.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_7.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_8.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_9.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_10.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_11.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_12.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_13.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_14.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_15.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_16.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_17.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_18.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_19.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_20.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_21.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_22.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_23.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_24.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_25.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_26.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_27.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_28.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_29.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_30.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_31.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_32.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_33.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_34.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_35.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_36.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_37.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_38.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_39.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_40.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_41.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_42.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_43.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_44.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_45.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_46.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_47.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_48.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_49.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_50.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_51.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_52.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_53.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_54.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_55.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_56.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_57.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_58.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_59.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_60.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_61.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_62.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_63.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_64.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_65.obj"/>
-    <mesh file="./female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_66.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_0.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_1.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_2.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_3.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_4.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_5.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_6.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_7.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_8.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_9.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_10.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_11.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_12.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_13.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_14.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_15.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_16.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_17.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_18.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_19.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_20.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_21.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_22.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_23.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_24.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_25.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_26.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_27.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_28.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_29.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_30.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_31.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_32.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_33.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_34.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_35.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_36.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_37.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_38.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_39.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_40.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_41.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_42.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_43.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_44.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_45.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_46.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_47.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_48.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_49.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_50.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_51.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_52.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_53.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_54.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_55.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_56.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_57.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_58.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_59.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_60.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_61.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_62.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_63.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_64.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_65.obj"/>
+    <mesh file="./objects/female-connector-truncated/female-connector-truncated/female-connector-truncated_collision_66.obj"/>
 
     <texture name="tex_ground" type="2d" builtin="checker" width="512" height="512" />
     <material name="groundplane" texture="tex_ground" texrepeat="5 5" reflectance="0.2" />

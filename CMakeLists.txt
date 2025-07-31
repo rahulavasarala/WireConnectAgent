@@ -89,6 +89,7 @@ list(APPEND MUJOCO_SAI_COMMON_LIBRARIES
 		${REDIS_PLUS_PLUS_LIBRARY}
 		mujoco::mujoco
 		${ZeroMQ_LIBRARY}
+    yaml-cpp::yaml-cpp
 		wire-connect-agent 
 	)
 
