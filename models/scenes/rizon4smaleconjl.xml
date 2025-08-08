@@ -246,6 +246,16 @@
         <geom mesh="female-connector-truncated_collision_66" rgba="0.4862699189558579 0.15440728675981452 0.9909902892642146 1" class="collision"/>
     </body>
 
+    <geom name="keypoint_male_1" type="sphere" size="0.001" rgba="1 0 0 1" pos="0 0 0" mass="0"/>
+    <geom name="keypoint_male_2" type="sphere" size="0.001" rgba="0 1 0 1" pos="0 0 0" mass="0"/>
+    <geom name="keypoint_male_3" type="sphere" size="0.001" rgba="0 0 1 1" pos="0 0 0" mass="0"/>
+    <geom name="keypoint_male_4" type="sphere" size="0.001" rgba="1 1 0 1" pos="0 0 0" mass="0"/>
+    <geom name="keypoint_female_1" type="sphere" size="0.001" rgba="1 0 0 1" pos="0 0 0" mass="0"/>
+    <geom name="keypoint_female_2" type="sphere" size="0.001" rgba="0 1 0 1" pos="0 0 0" mass="0"/>
+    <geom name="keypoint_female_3" type="sphere" size="0.001" rgba="0 0 1 1" pos="0 0 0" mass="0"/>
+    <geom name="keypoint_female_4" type="sphere" size="0.001" rgba="1 1 0 1" pos="0 0 0" mass="0"/>
+    <geom name="keypoint_control" type="sphere" size="0.001" rgba="1 1 1 1" pos="0 0 0" mass="0"/>
+
   </worldbody>
 
   <actuator>

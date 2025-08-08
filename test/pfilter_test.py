@@ -9,8 +9,8 @@ NUM_WORKERS = 1
 FREQ_HZ = 50
 INTERVAL = 1.0 / FREQ_HZ  # seconds per request
 DURATION_SEC = 10         # test duration per worker
-SERVER_ENDPOINT = "ipc:///tmp/zmq_pf_server"  # or "ipc:///tmp/zmq_torque_server"
-num_envs = 5
+SERVER_ENDPOINT = "ipc:///tmp/zmq_fspf_server"  # or "ipc:///tmp/zmq_torque_server"
+num_envs = 1
 
 """
     Test particle filter server
