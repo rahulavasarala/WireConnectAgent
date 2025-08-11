@@ -107,6 +107,9 @@ class SingleZMQEnv():
         self.saturation_radius = 0.05
         self.saturation_theta = math.pi/18
 
+        self.alpha = 1
+        self.beta = 2
+
         self.motion_or_force_axis = np.zeros(3)
         self.force_dim = 0
 
@@ -151,9 +154,9 @@ class SingleZMQEnv():
             self.move_to_targets(data, iterations = 10000)
             self.quick_reset_joint_pos = data.qpos.copy()
 
-        # self.sigmaMotion = np.identity(3)
-        # self.sigmaForce = np.zeros((3,3))
-        # self.reset_fspf_data()
+        self.sigmaMotion = np.identity(3)
+        self.sigmaForce = np.zeros((3,3))
+        self.reset_fspf_data()
 
         obs, _, _, _ = self._get_obs(data)
 
@@ -190,6 +193,7 @@ class SingleZMQEnv():
         self.female_points_frame = self.male_init_orient.T @ (female_points_world - self.male_init_point.reshape(3,1))
 
         ee_start = np.concatenate([self.male_init_point, R.from_matrix(self.male_init_orient).as_quat()])
+        print("Saving Orientations and positions of the male connector frame before training!")
         np.savetxt("start_pos_orient.txt", ee_start)
 
     def move_to_targets(self, data, iterations =1): #clean
@@ -224,6 +228,12 @@ class SingleZMQEnv():
         # print("joint_torques: {}".format(joint_torques))
         return joint_torques
     
+    def continuous_reward_function(self, x):
+
+        r = 2*(self.beta + 2)*(self.beta + math.e**(-self.alpha * x) + math.e**(self.alpha * x))**-1 -1
+
+        return r
+    
     def compute_reward(self, data):#clean
         
         key_points_male = self.get_key_points_male(data, "world")
@@ -231,40 +241,27 @@ class SingleZMQEnv():
 
         distance = np.linalg.norm(key_points_male - key_points_female)
 
-        bias = 0
+        continuous_reward = self.continuous_reward_function(distance)
 
-        if distance < 0.002:
-            bias += 1
+        discrete_reward = 0
+
+        if distance < 0.005:#need to tune this
+            discrete_reward += 1
         
         if self.out_of_bounds:
-            bias -= 3
+            discrete_reward -= 1
 
-        return -1*distance + bias
+        return continuous_reward + discrete_reward
     
     def sample_obs(self, data):#clean
-        force = data.sensordata[force_sensor_adr : force_sensor_adr + 3]
-        torque = data.sensordata[torque_sensor_adr: torque_sensor_adr + 3]
+        force_frame, torque_frame = self.get_force_torque_sensor_reading(data, "frame")
 
-        R_flat = data.xmat[site_id]
-        R_world_sensor = R_flat.reshape((3,3))
+        male_pos_frame, male_orient_frame = self.get_male_connector_pos_orient(data, "frame")
 
-        force_world = R_world_sensor @ force
-        torque_world = R_world_sensor @ torque
-
-        force_frame = self.male_init_orient.T @ force_world
-        torque_frame = self.male_init_orient.T @ torque_world
-
-        xmat = data.xmat[male_body_id]   
-        male_orient_world = xmat.reshape(3, 3)  
-
-        male_orient_frame = self.male_init_orient.T @ male_orient_world
-        male_pos_world = data.xpos[male_body_id]
-        male_pos_frame = self.male_init_orient.T @(male_pos_world - self.male_init_point)
-
-        male_frame_quat = R.from_matrix(male_orient_frame).as_quat()
-
+        male_orient_frame_quat = R.from_matrix(male_orient_frame).as_quat()
         flattened_point_cloud = self.female_points_frame.flatten()
-        obs = np.concatenate([force_frame, torque_frame, male_frame_quat, male_pos_frame, flattened_point_cloud])
+
+        obs = np.concatenate([force_frame, torque_frame, male_pos_frame, male_orient_frame_quat, flattened_point_cloud])
 
         return obs
     
@@ -316,15 +313,10 @@ class SingleZMQEnv():
         motion_control = (FILTER_FREQ/CONTROL_FREQ) * self.sigmaMotion @ desired_dx #correct
         force_control = (FILTER_FREQ/CONTROL_FREQ) * self.sigmaForce @ desired_dx #correct 
 
-        force = data.sensordata[force_sensor_adr : force_sensor_adr + 3]
-
-        R_flat = data.xmat[site_id]
-        R_world_sensor = R_flat.reshape((3,3))
-        measured_force = R_world_sensor @ force
-        measured_vel = data.cvel[male_body_id, :3]
+        measured_force, _ = self.get_force_torque_sensor_reading(data, "world")
+        measured_vel = self.get_velocity_reading(data, "world")
 
         stacked_data = np.concatenate([motion_control, force_control, measured_force, measured_vel])
-        # print("stacked_data : {}".format(stacked_data))
         packed_data = struct.pack('f' * stacked_data.shape[-1], *stacked_data)
 
         self.fspf_socket.send(packed_data)
@@ -452,6 +444,8 @@ class SingleZMQEnv():
         self.target_pos = male_pos_world_prime
         self.target_orient = R.from_matrix(male_orient_prime).as_quat()
 
+        return dx_world
+
     # The function below is a utility function
     def get_male_connector_pos_orient(self, data, frame_of_choice):
         male_con_pos_world = np.array(data.xpos[male_body_id])
@@ -461,7 +455,7 @@ class SingleZMQEnv():
         if frame_of_choice == "world":
             return male_con_pos_world, male_orient_world
         elif frame_of_choice == "frame":
-            return self.male_init_orient.T @ (male_con_pos_world - self.male_init_orient), self.male_init_orient.T @ male_orient_world
+            return self.male_init_orient.T @ (male_con_pos_world - self.male_init_point), self.male_init_orient.T @ male_orient_world
         
         return male_con_pos_world, male_orient_world
     
@@ -485,6 +479,35 @@ class SingleZMQEnv():
             return self.key_points_female
         
         return self.female_points_world
+    
+    def get_force_torque_sensor_reading(self, data, frame_of_choice):
+
+        force = data.sensordata[force_sensor_adr : force_sensor_adr + 3]
+        xquat = data.xquat[force_sensor_id] 
+        force_sensor_orient_world = R.from_quat(xquat).as_matrix() 
+        
+        torque = data.sensordata[torque_sensor_adr : torque_sensor_adr + 3]
+
+        force_world = force_sensor_orient_world @ force
+        torque_world = force_sensor_orient_world @ torque
+
+        if frame_of_choice == "world":
+            return force_world, torque_world
+        elif frame_of_choice == "frame":
+            return self.male_init_orient.T @ force_world, self.male_init_orient.T @ torque_world
+        
+        return force, torque
+    
+    def get_velocity_reading(self,data, frame_of_choice):
+
+        vel = data.cvel[male_body_id, :3]
+
+        if frame_of_choice == "world":
+            return vel
+        elif frame_of_choice == "frame":
+            return self.male_init_orient.T @ vel
+        
+        return vel
     
     #The function below is a utility function
     def show_keypoints(self, data):
@@ -519,6 +542,7 @@ class AgentRolloutTest():
     def __init__(self, weights_path, eval_pos_orient):
 
         self.step_count = 0
+        self.wait_count = 0
         self.env = SingleZMQEnv(mj_model,mj_data, np.zeros(3), np.array([0,1,0,0]), jt_socket, mft_socket, fspf_socket, eval_pos_orient=eval_pos_orient)
         self.env.set_mode("eval")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -540,16 +564,22 @@ class AgentRolloutTest():
 
     def step(self, data):
 
+        self.wait_count += 1
+
+        if self.wait_count < 120:
+            print("waiting")
+            return data, None
+
         if self.step_count >= 10:
             obs, _, _ , _ = self.env._get_obs(data)
-            
             obs = torch.Tensor(obs).to(self.device)
             action = self.sample_action(obs)
             action = action.cpu().numpy()
             action = action.reshape(7,)
-            self.step_count = 0
             print("action taken: {}".format(action))
             self.env.apply_action(data, action)
+
+            self.step_count = 0
 
         for _ in range(17):
             data , _ = self.env.step(data)
@@ -600,7 +630,7 @@ class ShowPointsTest():
 
     def __init__(self):
         self.step_count = 0
-        self.env = SingleZMQEnv(mj_model,mj_data, 1, np.zeros(3), np.array([0,1,0,0]), jt_socket, mft_socket, fspf_socket)
+        self.env = SingleZMQEnv(mj_model,mj_data, np.zeros(3), np.array([0,1,0,0]), jt_socket, mft_socket, fspf_socket)
         self.target_point = np.array([0.3,0.3, 0.2])
         self.target_orient = np.array([0,1,0,0])
 
@@ -616,10 +646,6 @@ class ShowPointsTest():
 
     def step(self, data):
 
-        if self.step_count >= 10: 
-            # self.env.set_target_pos_orient(self.target_point + 0.1 * self.sample_action(), self.target_orient)
-            self.step_count = 0
-
         for _ in range(17):
             data = self.env.move_to_targets(data)
 
@@ -628,6 +654,42 @@ class ShowPointsTest():
         male_pos, _ = self.env.get_male_connector_pos_orient(data, "world")
 
         print("difference between target position and actual male connector position: {}".format(np.linalg.norm(self.target_point - male_pos)))
+
+        self.step_count += 1
+
+        return data, _
+    
+class FSPFTest():
+
+    def __init__(self):
+        self.step_count = 0
+        self.env = SingleZMQEnv(mj_model,mj_data, np.zeros(3), np.array([0,1,0,0]), jt_socket, mft_socket, fspf_socket, eval_pos_orient = np.array([0.3, 0.3, 0.1, 0,1,0,0]))
+        self.env.set_mode("eval")
+
+        self.action = np.zeros(3)
+
+        self.env.saturation_radius = 1
+        self.env.saturation_theta = math.pi
+
+    def reset(self, data):
+        self.env.reset(data)
+        self.env.set_target_pos_orient(np.array([0.3, 0.4, -0.03]), np.array([0,1,0,0]))
+
+    def step(self, data):
+
+        curr_pos_male, _ = self.env.get_male_connector_pos_orient(data, "frame")
+        self.dx = self.env.target_pos - curr_pos_male
+    
+        for _ in range(17):
+            data = self.env.move_to_targets(data)
+            if self.env.step_count % 50 == 0:
+                _, fdim = self.env.update_fspf_server(data, self.dx)
+                print("Fdim : {}".format(fdim))
+
+        force_world, _ = self.env.get_force_torque_sensor_reading(data, "world")
+
+        print("Force sensor data in world frame is: {}".format(force_world))
+        print("Velocity reading is: {}".format(self.env.get_velocity_reading(data, "world")))
 
         self.step_count += 1
 
@@ -694,7 +756,7 @@ def cursor_position_callback(window, xpos, ypos):
 def main():
     global mj_data
     RHZ = 60.0
-    test_to_run = "Random"
+    test_to_run = "FSPF"
     test = None
     weights_path = "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/python_app/runs/run2/model300.cleanrl_model"
     
@@ -705,6 +767,8 @@ def main():
         test = RandomStepTest()
     elif test_to_run == "ShowPoints":
         test = ShowPointsTest()
+    elif test_to_run == "FSPF":
+        test = FSPFTest()
 
     # Reset simulation
     test.reset(mj_data)

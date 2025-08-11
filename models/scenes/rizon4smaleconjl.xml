@@ -138,12 +138,12 @@
                 <joint name="joint6" pos="0 0 0" axis="0 1 0" actuatorfrcrange="-39 39"/>
                 <geom type="mesh" rgba="1 1 1 1" mesh="link6"/>
                 <body name="link7" pos="-0.015 0.073 0.11" quat="0.707107 0 -0.707107 0">
-                <site name="force_site" pos="0 0 0"/>
                   <inertial pos="0 0 0.05" mass="1.4" diaginertia="0.1 0.1 0.1"/>
                   <joint name="joint7" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-39 39"/>
                   <geom type="mesh" rgba="1 1 1 1" mesh="link7"/>
                     <!-- Add the point mass here -->
                   <body name="point_mass_body" pos="0 0 0.15">
+                  <site name="force_site" pos="0 0 0.2"/>
                     <inertial pos="0 0 0" mass="0.893" diaginertia="0.0001 0.0001 0.0001"/>
 
                     <geom name="point_mass_cylinder" type="cylinder"

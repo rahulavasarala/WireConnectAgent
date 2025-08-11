@@ -170,6 +170,8 @@ if __name__ == "__main__":
 
     # env setup
     envs = SingleZMQEnv(mj_model=mj_model, mj_data = mj_data, target_pos=np.array([0.2,0.2,0.2]), target_orient=np.array([0,1,0,0]), jt_socket=jt_socket, mft_socket=mft_socket, fspf_socket=fspf_socket)
+    envs.alpha = 320
+    envs.beta = 16
     envs.set_mode("train")
 
     agent = Agent(envs).to(device)
