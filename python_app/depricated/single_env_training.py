@@ -54,7 +54,7 @@ import zmq
 from distrax import Normal
 
 #Let us import the single env from single_env.py
-from single_env import SingleZMQEnv
+from WireConnectAgent.python_app.env import SingleZMQEnv
 
 from policy_network import Actor, Critic, Network
 

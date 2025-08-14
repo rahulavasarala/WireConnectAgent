@@ -16,25 +16,15 @@ from policy_network import Agent
 
 import mujoco
 import zmq
-from single_env import SingleZMQEnv
+from env import ZMQEnv
+from utils import count_subdirectories
+from utils import params_from_yaml
+import shutil
 
 # -------------Init ----------------------------------------
 mj_xml_path = "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/rizon4smaleconjl.xml"
 mj_model = mujoco.MjModel.from_xml_path(mj_xml_path)
 mj_data = mujoco.MjData(mj_model)
-ROBOT_JOINTS = 7
-
-#Global variables related to the position of the object
-force_sensor_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "force_sensor")
-force_sensor_adr = mj_model.sensor_adr[force_sensor_id]
-
-torque_sensor_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "torque_sensor")
-torque_sensor_adr = mj_model.sensor_adr[torque_sensor_id]
-
-site_id = mj_model.sensor_objid[force_sensor_id]
-male_body_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, "male-connector-minimal")
-
-female_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, "female-connector-truncated")
 
 ctx = zmq.Context()
 
@@ -46,22 +36,8 @@ mft_socket.connect("ipc:///tmp/zmq_motion_force_server")
 
 fspf_socket = ctx.socket(zmq.REQ)
 fspf_socket.connect("ipc:///tmp/zmq_fspf_server")
-
-FILTER_FREQ = 50.0
-CONTROL_FREQ = 1000.0
-
+experiment_yaml = "./experiment.yaml"
 # ------------------------------- Init --------------------------------------------------------
-def count_subdirectories(path):
-    if not os.path.isdir(path):
-        print(f"Error: '{path}' is not a valid directory.")
-        return -1
-
-    count = 0
-    for entry_name in os.listdir(path):
-        full_path = os.path.join(path, entry_name)
-        if os.path.isdir(full_path):
-            count += 1
-    return count
 
 @dataclass
 class Args:
@@ -91,7 +67,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "WireConnectAgent"
     """the id of the environment"""
-    total_timesteps: int = 50000
+    total_timesteps: int = 100000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
@@ -133,7 +109,9 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 if __name__ == "__main__":
+    params = params_from_yaml(experiment_yaml)
     args = tyro.cli(Args)
+    args.total_timesteps = params["train_steps"]
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -150,15 +128,6 @@ if __name__ == "__main__":
             monitor_gym=True,
             save_code=True,
         )
-    writer = SummaryWriter(f"runs/{run_name}")
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    )
-
-    num_directories = count_subdirectories("./runs")
-    run_num = num_directories + 1
-    os.makedirs("./runs/run{}".format(run_num))
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -168,10 +137,13 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
+    experiment_run_dir = f"./runs/run_{params["name"]}"
+
+    os.makedirs(experiment_run_dir)
+    shutil.copyfile("./experiment.yaml", f"./runs/run_{params["name"]}/experiment_{params["name"]}.yaml")
+    
     # env setup
-    envs = SingleZMQEnv(mj_model=mj_model, mj_data = mj_data, target_pos=np.array([0.2,0.2,0.2]), target_orient=np.array([0,1,0,0]), jt_socket=jt_socket, mft_socket=mft_socket, fspf_socket=fspf_socket)
-    envs.alpha = 320
-    envs.beta = 16
+    envs = ZMQEnv(params, mj_model, mj_data, jt_socket=jt_socket, mft_socket=mft_socket, fspf_socket=fspf_socket)
     envs.set_mode("train")
 
     agent = Agent(envs).to(device)
@@ -224,8 +196,6 @@ if __name__ == "__main__":
                 for info in infos["final_info"]:
                     if info and "episode" in info:
                         print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -309,22 +279,13 @@ if __name__ == "__main__":
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
-        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
 
         if args.save_model and iteration % 100 == 0:
-            model_path = "runs/run{}/model{}.cleanrl_model".format(run_num, iteration)
+            model_path = f"{experiment_run_dir}/model{iteration}.cleanrl_model"
             torch.save(agent.state_dict(), model_path)
             print(f"model saved to {model_path}")
 
     envs.close()
-    writer.close()
+    # writer.close()
 
