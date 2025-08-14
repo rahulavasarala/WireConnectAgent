@@ -8,7 +8,7 @@ import numpy as np
 import math
 import glfw
 import time
-from utils import params_from_yaml
+from utils import params_from_yaml, show_keypoints, get_male_pos_orient
 
 mj_xml_path = "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/rizon4smaleconjl.xml"
 mj_model = mujoco.MjModel.from_xml_path(mj_xml_path)
@@ -151,8 +151,6 @@ class RandomStepTest():
 
     def reset(self, data):
         self.env.reset(data)
-        _, orient = self.env.get_male_connector_pos_orient(data, "world")
-        print(self.env.male_init_orient, orient)
 
     def step(self, data):
 
@@ -160,29 +158,23 @@ class RandomStepTest():
             self.action = self.sample_action()
             self.action = self.action.reshape(7,)
             self.step_count = 0
-            print("action taken: {}".format(self.action))
             data, _ = self.env.step(data, self.action)
 
         for _ in range(17):
             data , _ = self.env.step(data)
 
         self.step_count += 1
-
         return data, 1
     
 class ShowPointsTest():
 
     def __init__(self):
         self.step_count = 0
-        self.env = ZMQEnv(params, mj_model,mj_data, jt_socket, mft_socket, fspf_socket, eval_pos_orient=np.array([0.3, 0.3, 0.1, 0,1,0,0]))
+        self.env = ZMQEnv(params, mj_model,mj_data, jt_socket, mft_socket, fspf_socket)
         self.target_point = np.array([0.3,0.3, 0.2])
         self.target_orient = np.array([0,1,0,0])
 
         self.action = np.zeros(3)
-
-    def sample_action(self):
-        action = np.random.uniform(low = -0.1, high = 0.1, size = 3)
-        return action
 
     def reset(self, data):
         self.env.reset(data)
@@ -193,9 +185,10 @@ class ShowPointsTest():
         for _ in range(17):
             data = self.env.move_to_targets(data)
 
-        data = self.env.show_keypoints(data)
+        metadata = {"female_key_points": self.env.female_points_world}
+        data = show_keypoints(self.env.observer, data, self.env.params, metadata)
 
-        male_pos, _ = self.env.get_male_connector_pos_orient(data, "world")
+        male_pos, _ = get_male_pos_orient(self.env.observer, data)
 
         print("difference between target position and actual male connector position: {}".format(np.linalg.norm(self.target_point - male_pos)))
 

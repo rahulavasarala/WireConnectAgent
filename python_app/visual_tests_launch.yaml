@@ -1,4 +1,4 @@
-test: "ShowPoints"
+test: "Random"
 run_dir: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/python_app/runs"
 run_name: "chicken"
 iter: 300
