@@ -173,8 +173,9 @@ def show_keypoints(observer, data, params, metadata):
     
 
 class RewardModule():
-    def __init__(self):
-        pass
+    def __init__(self, debug):
+
+        self.debug = debug
 
     def custom_pos_orientation_reward(self, observer: MjObserver, data, params, metadata, telemetry):
 
@@ -187,14 +188,19 @@ class RewardModule():
         dist = np.linalg.norm(average_male_point - average_female_point)
         telemetry["min_dist"] = min(telemetry["min_dist"], dist)
     
-        _, male_orientation = observer.get_pos_orient(data, "link_7")
+        _, male_orientation = get_male_pos_orient(observer, data , quat = True)
         angle_rad = compute_theta_distance(male_orientation, metadata["init_orient"])
 
         norm_angle_rad = angle_rad/params["saturation_theta"]
         norm_distance = dist/(params["saturation_radius"] - params["mating_offset"])
 
         total_error = params["orient_weight"] * norm_angle_rad+params["dist_weight"] * norm_distance
-        continuous_reward = continuous_reward_function(total_error, params["alpha"], params["beta"])
+
+        continuous_reward = continuous_reward_func(params["alpha"], params["beta"],total_error)
+
+        if self.debug:
+            print(f"norm_distance is: {norm_distance}, norm angle: {angle_rad}, total_error : {total_error}, cont reward: {continuous_reward}")
+
 
         discrete_reward = 0
 
@@ -216,9 +222,14 @@ class RewardModule():
 
         dist = np.linalg.norm(average_male_point - average_female_point)
 
-        norm_distance = dist/(params["saturation_radius"] - params["mating_offset"])
+        telemetry["min_dist"] = min(dist, telemetry["min_dist"])
 
-        continuous_reward = continuous_reward_function(norm_distance, params["alpha"], params["beta"])
+        norm_distance = dist/(params["saturation_radius"] - params["mating_offset"])
+        
+        continuous_reward = continuous_reward_func(params["alpha"], params["beta"], norm_distance)
+
+        if self.debug:
+            print(f"norm_distance is: {norm_distance}, cont reward: {continuous_reward}")
 
         discrete_reward = 0
 
@@ -238,8 +249,14 @@ class RewardModule():
         
         return -1
 
-def continuous_reward_function(x, beta, alpha):
-    r = 2*(beta + 2)*(beta + math.e**(-alpha * x) + math.e**(alpha * x))**-1 -1
+def continuous_reward_func(a: float, b: float, x: float) -> float:
+    exp_ax = math.exp(a * x)
+    exp_neg_ax = math.exp(-a * x)
+
+    denominator = b + exp_neg_ax + exp_ax
+
+    r = 2 * (b + 2) * (denominator**-1) - 1
+
     return r
 
 #helper function which communicates to the zmq server

@@ -1,24 +1,26 @@
-name: "GoodCase"
-alpha: 2.65
+name: "hype"
+alpha: 3.5
 beta: 1
 dist_weight: 1
 orient_weight: 1
 num_phys_steps: 170
 actions_per_episode: 60
-trans_noise: 0
+trans_noise: 0.001
 orient_noise: 0
 max_force_thresh: 0.1
-max_rotation_thresh: 0.1
+max_rotation_thresh: 0.01
 max_displacement_thresh: 0.002
-success_dist_thresh: 0.002
+success_dist_thresh: 0.003
 success_reward: 100
 out_of_bounds_penalty: -10
-mating_offset: 0.01
+mating_offset: 0
 
 reward: "custom_pos_orient" # could be set to nvidia reward
 
-saturation_radius: 0.1
-saturation_theta: 20
+saturation_radius: 0.04
+saturation_theta: 0.1423
 
 train_steps : 100000 # 666 epochs
+
+debug: false
 

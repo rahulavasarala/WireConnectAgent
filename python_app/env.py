@@ -23,7 +23,8 @@ class ZMQEnv():
     def __init__(self, params, mj_model, mj_data, jt_socket, mft_socket, fspf_socket, action_space_dim = 7, observation_space_dim = 25, eval_pos_orient = None):#clean
 
         self.observer = MjObserver(mj_model, mj_data)
-        self.reward_module = RewardModule()
+        self.reward_module = RewardModule(params["debug"])
+        print(f"Debug mode is: {params["debug"]}")
 
         self.params = params
         self.target_pos = np.array([0.2,0.2,0.2])
@@ -51,7 +52,7 @@ class ZMQEnv():
         self.out_of_bounds = False
 
         self.mode = "train"
-        self.telemetry = {"step_count": 0, "no_contact_count": 0, "min_dist": 0, "reward_sum": 0, "out_of_bounds": False}
+        self.telemetry = {"step_count": 0, "no_contact_count": 0, "min_dist": 1, "reward_sum": 0, "out_of_bounds": False}
        
         if eval_pos_orient is not None:
             self.on_init_given_eval_pos(eval_pos_orient)
@@ -66,6 +67,8 @@ class ZMQEnv():
             data.qpos[:] = self.quick_reset_joint_pos
             data.qvel[:] = np.zeros(ROBOT_JOINTS)
             mujoco.mj_step(self.mj_model, data)
+            self.target_point = self.male_init_point
+            self.target_orient = R.from_matrix(self.male_init_orient).as_quat()
         else:
             self.target_pos = self.male_init_point
             self.target_orient = R.from_matrix(self.male_init_orient).as_quat()
