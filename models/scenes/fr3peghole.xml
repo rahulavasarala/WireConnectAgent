@@ -1,0 +1,276 @@
+<mujoco model="fr3">
+  <compiler angle="radian" meshdir=".."/>
+
+  <option integrator="implicitfast"/>
+
+  <default>
+    <default class="fr3">
+      <joint armature="0.1" damping="1"/>
+      <position inheritrange="1"/>
+      <default class="visual">
+        <geom type="mesh" group="2" contype="0" conaffinity="0"/>
+      </default>
+      <default class="collision">
+        <geom type="mesh" group="3" mass="0" density="0"/>
+      </default>
+      <site size="0.001" rgba="0.5 0.5 0.5 0.3" group="4"/>
+    </default>
+  </default>
+
+  <asset>
+    <material name="black" rgba=".2 .2 .2 1"/>
+    <material name="white" rgba="1 1 1 1"/>
+    <material name="red" rgba="1 0.072272 0.039546 1"/>
+    <material name="gray" rgba="0.863156 0.863156 0.863157 1"/>
+    <material name="button_green" rgba="0.102241 0.571125 0.102242 1"/>
+    <material name="button_red" rgba="0.520996 0.008023 0.013702 1"/>
+    <material name="button_blue" rgba="0.024157 0.445201 0.737911 1"/>
+
+    <mesh file="./robots/panda/link0_0.obj"/>
+    <mesh file="./robots/panda/link0_1.obj"/>
+    <mesh file="./robots/panda/link0_2.obj"/>
+    <mesh file="./robots/panda/link0_3.obj"/>
+    <mesh file="./robots/panda/link0_4.obj"/>
+    <mesh file="./robots/panda/link0_5.obj"/>
+    <mesh file="./robots/panda/link0_6.obj"/>
+    <mesh file="./robots/panda/link1.obj"/>
+    <mesh file="./robots/panda/link2.obj"/>
+    <mesh file="./robots/panda/link3_0.obj"/>
+    <mesh file="./robots/panda/link3_1.obj"/>
+    <mesh file="./robots/panda/link4_0.obj"/>
+    <mesh file="./robots/panda/link4_1.obj"/>
+    <mesh file="./robots/panda/link5_0.obj"/>
+    <mesh file="./robots/panda/link5_1.obj"/>
+    <mesh file="./robots/panda/link5_2.obj"/>
+    <mesh file="./robots/panda/link6_0.obj"/>
+    <mesh file="./robots/panda/link6_1.obj"/>
+    <mesh file="./robots/panda/link6_2.obj"/>
+    <mesh file="./robots/panda/link6_3.obj"/>
+    <mesh file="./robots/panda/link6_4.obj"/>
+    <mesh file="./robots/panda/link6_5.obj"/>
+    <mesh file="./robots/panda/link6_6.obj"/>
+    <mesh file="./robots/panda/link6_7.obj"/>
+    <mesh file="./robots/panda/link7_0.obj"/>
+    <mesh file="./robots/panda/link7_1.obj"/>
+    <mesh file="./robots/panda/link7_2.obj"/>
+    <mesh file="./robots/panda/link7_3.obj"/>
+
+    <mesh name="link0_coll" file="./robots/panda/link0.stl"/>
+    <mesh name="link1_coll" file="./robots/panda/link1.stl"/>
+    <mesh name="link2_coll" file="./robots/panda/link2.stl"/>
+    <mesh name="link3_coll" file="./robots/panda/link3.stl"/>
+    <mesh name="link4_coll" file="./robots/panda/link4.stl"/>
+    <mesh name="link5_coll" file="./robots/panda/link5.stl"/>
+    <mesh name="link6_coll" file="./robots/panda/link6.stl"/>
+    <mesh name="link7_coll" file="./robots/panda/link7.stl"/>
+
+    <mesh name="holesim" file="./objects/peginhole/holesim.stl"/>
+    <mesh name="geom0" file="./objects/peginhole/geometry_0.obj"/>
+    <mesh name="geom1" file="./objects/peginhole/geometry_1.obj"/>
+    <mesh name="geom2" file="./objects/peginhole/geometry_2.obj"/>
+    <mesh name="geom3" file="./objects/peginhole/geometry_3.obj"/>
+    <mesh name="geom4" file="./objects/peginhole/geometry_4.obj"/>
+    <mesh name="geom5" file="./objects/peginhole/geometry_5.obj"/>
+    <mesh name="geom6" file="./objects/peginhole/geometry_6.obj"/>
+    <mesh name="geom7" file="./objects/peginhole/geometry_7.obj"/>
+    <mesh name="geom8" file="./objects/peginhole/geometry_8.obj"/>
+    <mesh name="geom9" file="./objects/peginhole/geometry_9.obj"/>
+    <mesh name="geom10" file="./objects/peginhole/geometry_10.obj"/>
+    <mesh name="geom11" file="./objects/peginhole/geometry_11.obj"/>
+    <mesh name="geom12" file="./objects/peginhole/geometry_12.obj"/>
+    <mesh name="geom13" file="./objects/peginhole/geometry_13.obj"/>
+    <mesh name="geom14" file="./objects/peginhole/geometry_14.obj"/>
+    <mesh name="geom15" file="./objects/peginhole/geometry_15.obj"/>
+    <mesh name="geom16" file="./objects/peginhole/geometry_16.obj"/>
+    <mesh name="geom17" file="./objects/peginhole/geometry_17.obj"/>
+    <mesh name="geom18" file="./objects/peginhole/geometry_18.obj"/>
+    <mesh name="geom19" file="./objects/peginhole/geometry_19.obj"/>
+    <mesh name="geom20" file="./objects/peginhole/geometry_20.obj"/>
+    <mesh name="geom21" file="./objects/peginhole/geometry_21.obj"/>
+    <mesh name="geom22" file="./objects/peginhole/geometry_22.obj"/>
+    <mesh name="geom23" file="./objects/peginhole/geometry_23.obj"/>
+    <mesh name="geom24" file="./objects/peginhole/geometry_24.obj"/>
+    <mesh name="geom25" file="./objects/peginhole/geometry_25.obj"/>
+    <mesh name="geom26" file="./objects/peginhole/geometry_26.obj"/>
+    <mesh name="geom27" file="./objects/peginhole/geometry_27.obj"/>
+    <mesh name="geom28" file="./objects/peginhole/geometry_28.obj"/>
+    <mesh name="geom29" file="./objects/peginhole/geometry_29.obj"/>
+    <mesh name="geom30" file="./objects/peginhole/geometry_30.obj"/>
+    <mesh name="geom31" file="./objects/peginhole/geometry_31.obj"/>
+
+    <texture name="tex_ground" type="2d" builtin="checker" width="512" height="512" />
+    <material name="groundplane" texture="tex_ground" texrepeat="5 5" reflectance="0.2" />
+  </asset>
+
+  <worldbody>
+    <body name="base" childclass="fr3">
+      <body name="fr3_link0">
+        <geom mesh="link0_0" material="black" class="visual"/>
+        <geom mesh="link0_1" material="white" class="visual"/>
+        <geom mesh="link0_2" material="white" class="visual"/>
+        <geom mesh="link0_3" material="white" class="visual"/>
+        <geom mesh="link0_4" material="white" class="visual"/>
+        <geom mesh="link0_5" material="red" class="visual"/>
+        <geom mesh="link0_6" material="black" class="visual"/>
+        <geom name="fr3_link0_collision" mesh="link0_coll" class="collision"/>
+        <body name="fr3_link1" pos="0 0 0.333">
+          <inertial pos="4.128e-07 -0.0181251 -0.0386036" quat="0.998098 -0.0605364 0.00380499 0.0110109" mass="2.92747"
+            diaginertia="0.0239286 0.0227246 0.00610634"/>
+          <joint name="fr3_joint1" axis="0 0 1" range="-2.7437 2.7437" actuatorfrcrange="-87 87"/>
+          <geom name="fr3_link1_collision" class="collision" mesh="link1_coll"/>
+          <geom material="white" mesh="link1" class="visual"/>
+          <body name="fr3_link2" quat="1 -1 0 0">
+            <inertial pos="0.00318289 -0.0743222 0.00881461" quat="0.502599 0.584437 -0.465998 0.434366" mass="2.93554"
+              diaginertia="0.0629567 0.0411924 0.0246371"/>
+            <joint name="fr3_joint2" axis="0 0 1" range="-1.7837 1.7837" actuatorfrcrange="-87 87"/>
+            <geom material="white" mesh="link2" class="visual"/>
+            <geom name="fr3_link2_collision" class="collision" mesh="link2_coll"/>
+            <body name="fr3_link3" pos="0 -0.316 0" quat="1 1 0 0">
+              <inertial pos="0.0407016 -0.00482006 -0.0289731" quat="0.921025 -0.244161 0.155272 0.260745" mass="2.2449"
+                diaginertia="0.0267409 0.0189869 0.0171587"/>
+              <joint name="fr3_joint3" axis="0 0 1" range="-2.9007 2.9007" actuatorfrcrange="-87 87"/>
+              <geom mesh="link3_0" material="white" class="visual"/>
+              <geom mesh="link3_1" material="black" class="visual"/>
+              <geom name="fr3_link3_collision" class="collision" mesh="link3_coll"/>
+              <body name="fr3_link4" pos="0.0825 0 0" quat="1 1 0 0">
+                <inertial pos="-0.0459101 0.0630493 -0.00851879" quat="0.438018 0.803311 0.00937812 0.403414"
+                  mass="2.6156" diaginertia="0.05139 0.0372717 0.0160047"/>
+                <joint name="fr3_joint4" axis="0 0 1" range="-3.0421 -0.1518" actuatorfrcrange="-87 87"/>
+                <geom mesh="link4_0" material="white" class="visual"/>
+                <geom mesh="link4_1" material="black" class="visual"/>
+                <geom name="fr3_link4_collision" class="collision" mesh="link4_coll"/>
+                <body name="fr3_link5" pos="-0.0825 0.384 0" quat="1 -1 0 0">
+                  <inertial pos="-0.00160396 0.0292536 -0.0972966" quat="0.919031 0.125604 0.0751531 -0.366003"
+                    mass="2.32712" diaginertia="0.0579335 0.0449144 0.0130634"/>
+                  <joint name="fr3_joint5" axis="0 0 1" range="-2.8065 2.8065" actuatorfrcrange="-12 12"
+                    armature="0.074" frictionloss="0.763"/>
+                  <geom mesh="link5_0" material="white" class="visual"/>
+                  <geom mesh="link5_1" material="white" class="visual"/>
+                  <geom mesh="link5_2" material="black" class="visual"/>
+                  <geom name="fr3_link5_collision" class="collision" mesh="link5_coll"/>
+                  <body name="fr3_link6" quat="1 1 0 0">
+                    <inertial pos="0.0597131 -0.0410295 -0.0101693" quat="0.621301 0.552665 0.510011 0.220081"
+                      mass="1.81704" diaginertia="0.0175039 0.0161123 0.00193529"/>
+                    <joint name="fr3_joint6" axis="0 0 1" range="0.5445 4.5169" actuatorfrcrange="-12 12"
+                      armature="0.074" frictionloss="0.44"/>
+                    <geom mesh="link6_0" material="button_green" class="visual"/>
+                    <geom mesh="link6_1" material="white" class="visual"/>
+                    <geom mesh="link6_2" material="white" class="visual"/>
+                    <geom mesh="link6_3" material="gray" class="visual"/>
+                    <geom mesh="link6_4" material="button_red" class="visual"/>
+                    <geom mesh="link6_5" material="white" class="visual"/>
+                    <geom mesh="link6_6" material="black" class="visual"/>
+                    <geom mesh="link6_7" material="button_blue" class="visual"/>
+                    <geom name="fr3_link6_collision" class="collision" mesh="link6_coll"/>
+                    <body name="fr3_link7" pos="0.088 0 0" quat="1 1 0 0">
+                      <inertial pos="0.00452258 0.00862619 -0.0161633" quat="0.727579 0.0978688 -0.24906 0.63168"
+                        mass="0.627143" diaginertia="0.000223836 0.000223642 5.64132e-07"/>
+                      <joint name="fr3_joint7" axis="0 0 1" range="-3.0159 3.0159" actuatorfrcrange="-12 12"
+                        armature="0.074" frictionloss="0.248"/>
+                      <geom mesh="link7_0" material="black" class="visual"/>
+                      <geom mesh="link7_1" material="white" class="visual"/>
+                      <geom mesh="link7_2" material="white" class="visual"/>
+                      <geom mesh="link7_3" material="black" class="visual"/>
+                      <geom name="fr3_link7_collision" class="collision" mesh="link7_coll"/>
+                      <site name="force_site" pos="0 0 0"/>
+
+                        <body name="tool" pos="0 0 0.15">
+                
+                            <inertial pos="0 0 0" mass="0" diaginertia="0.0001 0.0001 0.0001"/>
+                            <geom name="point_mass_cylinder" type="cylinder"
+                            size="0.0235 0.2" 
+                            rgba="1 0 0 1"    
+                            contype="1" conaffinity="1" 
+                            group="2"/>  
+
+
+                        </body>
+                        
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane" friction="1 0.005 0.0001" />
+
+    <body name="task" pos="0 0.4 0.0" quat="1 0 0 0">
+      <geom mesh="holesim" class="visual"/>
+      <geom mesh="geom0"  class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom1" rgba="0.9716724395095205 0.4155773668635704 0.4891406227984333 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom2" rgba="0.14830229256383265 0.6475927777174105 0.7338673709396254 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom3" rgba="0.9669567561504457 0.1597578128209678 0.014474842421785983 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom4" rgba="0.6799236025959631 0.3699565607110832 0.5072143585472161 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom5" rgba="0.4268029638925618 0.48928493834570574 0.5899333271522715 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom6" rgba="0.8260291399072678 0.4209205902022757 0.8043892236206673 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom7" rgba="0.6130379479462504 0.42045031701196356 0.540917958831619 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom8"  class="collision"/>
+      <geom mesh="geom9"  class="collision"/>
+      <geom mesh="geom10" rgba="0.9716724395095205 0.4155773668635704 0.4891406227984333 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom11" rgba="0.14830229256383265 0.6475927777174105 0.7338673709396254 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom12" rgba="0.9669567561504457 0.1597578128209678 0.014474842421785983 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom13" rgba="0.6799236025959631 0.3699565607110832 0.5072143585472161 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom14" rgba="0.4268029638925618 0.48928493834570574 0.5899333271522715 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom15" rgba="0.8260291399072678 0.4209205902022757 0.8043892236206673 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom16" rgba="0.6130379479462504 0.42045031701196356 0.540917958831619 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom17"  class="collision"/>
+      <geom mesh="geom18"  class="collision"/>
+      <geom mesh="geom19" rgba="0.9716724395095205 0.4155773668635704 0.4891406227984333 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom20" rgba="0.14830229256383265 0.6475927777174105 0.7338673709396254 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom21" rgba="0.9669567561504457 0.1597578128209678 0.014474842421785983 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom22" rgba="0.6799236025959631 0.3699565607110832 0.5072143585472161 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom23" rgba="0.4268029638925618 0.48928493834570574 0.5899333271522715 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom24" rgba="0.8260291399072678 0.4209205902022757 0.8043892236206673 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom25" rgba="0.6130379479462504 0.42045031701196356 0.540917958831619 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom26"  class="collision"/>
+      <geom mesh="geom27"  class="collision"/>
+      <geom mesh="geom28" rgba="0.9716724395095205 0.4155773668635704 0.4891406227984333 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom29" rgba="0.14830229256383265 0.6475927777174105 0.7338673709396254 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom30" rgba="0.9669567561504457 0.1597578128209678 0.014474842421785983 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom31" rgba="0.6799236025959631 0.3699565607110832 0.5072143585472161 1" class="collision" friction="0.1 0.1 0.1"/>
+    </body>
+
+    <geom name="task_keypoint_1" type="sphere" size="0.001" rgba="1 0 0 1" pos="0.4 0 0" mass="0"/>
+    <geom name="task_keypoint_2" type="sphere" size="0.001" rgba="0 1 0 1" pos="0 0 0" mass="0"/>
+    <geom name="task_keypoint_3" type="sphere" size="0.001" rgba="0 0 1 1" pos="0 0 0" mass="0"/>
+    <geom name="task_keypoint_4" type="sphere" size="0.001" rgba="1 1 0 1" pos="0 0 0" mass="0"/>
+    <geom name="tool_keypoint_1" type="sphere" size="0.001" rgba="1 0 0 1" pos="0 0 0" mass="0"/>
+    <geom name="tool_keypoint_2" type="sphere" size="0.001" rgba="0 1 0 1" pos="0 0 0" mass="0"/>
+    <geom name="tool_keypoint_3" type="sphere" size="0.001" rgba="0 0 1 1" pos="0 0 0" mass="0"/>
+    <geom name="tool_keypoint_4" type="sphere" size="0.001" rgba="1 1 0 1" pos="0 0 0" mass="0"/>
+    <geom name="control_point" type="sphere" size="0.001" rgba="1 1 1 1" pos="0 0 0" mass="0"/>
+    <geom name="zone_sphere" type="sphere" size="0.001" rgba="1 1 1 1" pos="0 0 0" mass="0"/>
+    <geom name="zone_cyl" type="cylinder" size="0.01 0.05" rgba="1 1 1 1" pos="0 0 0" mass="0"/>
+  </worldbody>
+
+  <actuator>
+    <!-- <position class="fr3" name="fr3_joint1" joint="fr3_joint1" kp="4500" kv="450"/>
+    <position class="fr3" name="fr3_joint2" joint="fr3_joint2" kp="4500" kv="450"/>
+    <position class="fr3" name="fr3_joint3" joint="fr3_joint3" kp="3500" kv="350"/>
+    <position class="fr3" name="fr3_joint4" joint="fr3_joint4" kp="3500" kv="350"/>
+    <position class="fr3" name="fr3_joint5" joint="fr3_joint5" kp="2000" kv="200"/>
+    <position class="fr3" name="fr3_joint6" joint="fr3_joint6" kp="2000" kv="200"/>
+    <position class="fr3" name="fr3_joint7" joint="fr3_joint7" kp="2000" kv="200"/> -->
+    <motor class="fr3" name="fr3_joint1" joint="fr3_joint1" ctrlrange="-87 87"/>
+    <motor class="fr3" name="fr3_joint2" joint="fr3_joint2" ctrlrange="-87 87"/>
+    <motor class="fr3" name="fr3_joint3" joint="fr3_joint3" ctrlrange="-87 87"/>
+    <motor class="fr3" name="fr3_joint4" joint="fr3_joint4" ctrlrange="-87 87"/>
+    <motor class="fr3" name="fr3_joint5" joint="fr3_joint5" ctrlrange="-12 12"/>
+    <motor class="fr3" name="fr3_joint6" joint="fr3_joint6" ctrlrange="-12 12"/>
+    <motor class="fr3" name="fr3_joint7" joint="fr3_joint7" ctrlrange="-12 12"/>
+  </actuator>
+
+  <sensor>
+    <force name="force_sensor" site="force_site"/>
+    <torque name="torque_sensor" site="force_site"/>
+  </sensor>
+
+  <keyframe>
+    <key name="home" qpos="0.746 -0.38 0.85 -2.71 0.48 2.385 1.1696"/> 
+  </keyframe>
+</mujoco>

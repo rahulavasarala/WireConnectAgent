@@ -1,0 +1,11 @@
+xml_path: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3peghole.xml"
+action_type: "model"
+
+model: #This is if we need it
+  run_dir: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/python_app/runs"
+  run_name: "peginhole_1"
+  iter: 100
+
+debug: True
+replay: True
+

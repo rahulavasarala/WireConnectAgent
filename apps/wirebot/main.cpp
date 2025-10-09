@@ -41,15 +41,15 @@ using std::chrono::duration;
 using std::chrono::milliseconds;
 
 //redis client
-Sai2Common::RedisClient redis_client;
+SaiCommon::RedisClient redis_client;
 
 // globals
-const string mujoco_file = std::string(URDF_PATH) + "/scenes/rizon4smalecon.xml";
-const string robot_file = std::string(URDF_PATH) + "/scenes/rizon4spayload.urdf";
+const string mujoco_file = std::string(URDF_PATH) + "/scenes/fr3peghole.xml";
+const string robot_file = std::string(URDF_PATH) + "/scenes/fr3.urdf";
 const string robot_name = "rizon4s";
-std::shared_ptr<Sai2Model::Sai2Model> robot;
-std::shared_ptr<Sai2Primitives::MotionForceTask> motion_force_task;
-std::shared_ptr<Sai2Primitives::JointTask> joint_task;
+std::shared_ptr<SaiModel::SaiModel> robot;
+std::shared_ptr<SaiPrimitives::MotionForceTask> motion_force_task;
+std::shared_ptr<SaiPrimitives::JointTask> joint_task;
 
 const string forces = "rizon4s::sensed_forces";
 const string torques = "rizon4s::sensed_torques";
@@ -165,104 +165,9 @@ void scroll(GLFWwindow *window, double xoffset, double yoffset)
     mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &scn, &cam);
 }
 
-//Get the camera rotation matrix from the mjmodel
-Matrix3d getCameraRotationMatrix(const mjModel* m, int cam_id) {
-    mjtNum quat[4];
-    mju_copy4(quat, m->cam_quat + 4 * cam_id);
-
-
-    mjtNum mujoco_mat[9];
-    mju_quat2Mat(mujoco_mat, quat);
-
-    Matrix3d R;
-
-    R << mujoco_mat[0], mujoco_mat[1], mujoco_mat[2],
-         mujoco_mat[3], mujoco_mat[4], mujoco_mat[5],
-         mujoco_mat[6], mujoco_mat[7], mujoco_mat[8];
-
-    return R;
-}
-
-std::vector<float> sampleDepth(float * depth, int width, int height,  int stride) {
-    std::vector<float> depth_flat;
-    for(int i = 0; i < width*height; i += stride) {
-        depth_flat.push_back(depth[i]);
-    }
-
-    return depth_flat;
-}
-
-std::vector<float> flattenPointCloud(std::vector<Vector3d> cloud) {
-
-    std::vector<float> buffer;
-    for(int i = 0; i < cloud.size(); i++) {
-        buffer.push_back(cloud[i](0));
-        buffer.push_back(cloud[i](1));
-        buffer.push_back(cloud[i](2));
-    }
-
-    return buffer;
-}
-
-//Generate I think we should have a relative point cloud with respect to the camera
-std::vector<Vector3d> generatePointCloud(const mjModel* m, const mjData* d, const float* depth_buffer, int width, int height, int xstride, int ystride, int cam_id, bool useLocal) {
-
-    std::vector<Vector3d> cloud;
-
-    mjtNum cam_pos[3];
-    mju_copy3(cam_pos, m->cam_pos + 3 * cam_id);
-
-    float near = m->vis.map.znear;
-    float far = m->vis.map.zfar;
-
-    float fov = m->cam_fovy[cam_id] * M_PI/180.0f;
-    float fx = 0.5f * width/std::tan(fov/2.0f);
-    float fy = 0.5f * height/std::tan(fov/2.0f);
-
-    float cx = width/2.0f;
-    float cy = height/2.0f;
-
-    Matrix3d R = Matrix3d::Identity();
-    
-    if (!useLocal) {
-        R = getCameraRotationMatrix(m, cam_id);
-    }
-
-    int count = 0;
-
-    for(int y = 0; y < height; y += ystride) {
-        for(int x = 0; x < width; x += xstride) {
-            
-            int idx = y * width + x;
-
-            float z_buf = depth_buffer[idx];
-
-            if(z_buf >= 1.0f) {
-                continue;
-            }
-
-            float z = near * far / (far - (far - near)* z_buf);
-            float x_cam = (x - cx) * z / fx;
-            float y_cam = (y - cy)*z/fy;
-
-            Vector3d p_cam(x_cam, -y_cam, -z);
-
-            if (useLocal) {
-                cloud.push_back(p_cam);
-                continue;
-            }
-
-            Vector3d p_world = R * p_cam + Vector3d(cam_pos[0], cam_pos[1], cam_pos[2]);
-            cloud.push_back(p_world);
-        }
-    }
-
-    return cloud;
-}
-
 // controller callback
 void controller_callback(const mjModel* m, mjData* d);
-void updateRobotState(std::shared_ptr<Sai2Model::Sai2Model> robot, const mjModel* m, const mjData* d);
+void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d);
 
 void init_redis() {
     redis_client.setEigen(DESIRED_CARTESIAN_POSITION, START_POS);
@@ -299,21 +204,20 @@ int main(int argc, char* argv[])
     std::cout << "Joint limits disabled!" << std::endl;
 
     // create robot and controller
-    robot = std::make_shared<Sai2Model::Sai2Model>(robot_file, false);
+    robot = std::make_shared<SaiModel::SaiModel>(robot_file, false);
     std::cout << "Robot DOF: " << robot->dof() << "\n";
     std::cout << "MJ DOF: " << m->nq << "\n"; 
-    std::string control_link = "link7";
-    Vector3d control_point = Vector3d(0, 0, 0.224);
+    std::string control_link = "fr3_link7";
+    Vector3d control_point = Vector3d(0, 0, 0.35);
     Affine3d control_frame = Affine3d::Identity();
     control_frame.translation() = control_point;
-    motion_force_task = std::make_shared<Sai2Primitives::MotionForceTask>(robot, control_link, control_frame);
+    motion_force_task = std::make_shared<SaiPrimitives::MotionForceTask>(robot, control_link, control_frame);
     motion_force_task->disableInternalOtg();
-    joint_task = std::make_shared<Sai2Primitives::JointTask>(robot);
+    joint_task = std::make_shared<SaiPrimitives::JointTask>(robot);
 
     // set initial state 
     VectorXd q_init = robot->q();
-    q_init.head(7) << 0, -40, 0, 90, 0, 40 , 0;
-    q_init.head(7) *= M_PI / 180;
+    q_init.head(7) << 0.746 , -0.38, 0.85, -2.71, 0.48, 2.385, 1.1696;
     std::cout << "Initial joint configuration: " << q_init.transpose() << "\n";
     for (int i = 0; i < 7; ++i) {
         d->qpos[i] = q_init(i);
@@ -437,7 +341,7 @@ void reset_joint_positions(const mjModel* m, const mjData* d) {
     updateRobotState(robot, m, d);
 }
 
-void update_redis(std::shared_ptr<Sai2Model::Sai2Model> robot) {
+void update_redis(std::shared_ptr<SaiModel::SaiModel> robot) {
     Vector3d currentPosition = motion_force_task->getCurrentPosition();
     Matrix3d currentOrientation = motion_force_task->getCurrentOrientation();
 
@@ -446,7 +350,7 @@ void update_redis(std::shared_ptr<Sai2Model::Sai2Model> robot) {
 }
 
 // ---------------------------------------
-void updateRobotState(std::shared_ptr<Sai2Model::Sai2Model> robot, const mjModel* m, const mjData* d) {
+void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot, const mjModel* m, const mjData* d) {
 
     VectorXd robot_q(ROBOT_GRIPPER_JOINTS), robot_dq(ROBOT_GRIPPER_JOINTS);
 
@@ -476,14 +380,6 @@ void controller_callback(const mjModel* m, mjData* d) {
 
     redis_client.setEigen(QPOS, mcgp);
 
-    bool reset = redis_client.getBool(RESET);
-
-    if (reset) {
-        reset_joint_positions(m,d);
-        redis_client.setBool(RESET, false);
-        return;
-    }
-
     // update robot state
     updateRobotState(robot, m, d);
 
@@ -501,7 +397,6 @@ void controller_callback(const mjModel* m, mjData* d) {
     MatrixXd g_p = redis_client.getEigen(DESIRED_CARTESIAN_POSITION);
     Vector3d goal_position = g_p.col(0).template head<3>();
     Matrix3d goal_orientation = redis_client.getEigen(DESIRED_CARTESIAN_ORIENTATION).topLeftCorner<3,3>();
-    int goal_gripper_pos = redis_client.getInt(DESIRED_GRIPPER_POSITION);
 
     // get time 
     double time = d->time;
@@ -509,10 +404,6 @@ void controller_callback(const mjModel* m, mjData* d) {
 
     // compute control torque
 	VectorXd control_torques = VectorXd::Zero(robot->dof());
-
-    // if (time - t_wait > total_duration) {
-    //     throw runtime_error("Simulation finished\n");
-    // }
 
     if (time > t_wait) {
         // set goals 
@@ -534,6 +425,5 @@ void controller_callback(const mjModel* m, mjData* d) {
         d->ctrl[i] = control_torques(i);  // set actuated joint torques 
     }
 
-    // d->ctrl[7] = static_cast<mjtNum>(goal_gripper_pos); // how to control the gripper
 }
 
