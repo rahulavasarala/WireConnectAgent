@@ -22,6 +22,9 @@ NUM_ENVS = 1
 mj_model = mujoco.MjModel.from_xml_path("../models/scenes/fr3peghole_modified.xml")
 mj_data = mujoco.MjData(mj_model)
 link7_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, "fr3_link7")
+home_key_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_KEY, "home")
+home_qpos = mj_model.key_qpos[home_key_id]
+HOME_QPOS = jnp.array(home_qpos)
 
 def rotmat_to_quat(R: jnp.ndarray) -> jnp.ndarray:
     """Convert 3x3 rotation matrix to quaternion [x, y, z, w]."""
@@ -128,19 +131,19 @@ class ParallelContactRichEnv:
 
         self.jt_server = servers[0]
 
-        self.target_pos = jnp.tile(jnp.array([0.3, 0.3, 0.3]), (NUM_ENVS, 1))
+        self.target_pos = jnp.tile(jnp.array([0.3, 0.4, 0.3]), (NUM_ENVS, 1))
         self.target_orient = jnp.tile(jnp.array([[1,0,0], [0, -1, 0], [0,0,-1]]), (NUM_ENVS, 1,1))
 
-    def move_to_targets(self, data, iterations = 2):
+    def move_to_targets(self, data, iterations = 5000):
 
         for i in range(iterations):
-            # targets_and_values = get_joint_torque_targets_and_values_batch(data, self.target_pos, self.target_orient)
+            targets_and_values = get_joint_torque_targets_and_values_batch(data, self.target_pos, self.target_orient)
             # print(f"size targets and values: {targets_and_values} {i}")
             # # q_vel = self.get_qvel(data)
             # # print(f"qvel : {q_vel}")
-            # joint_torques = get_joint_torques(targets_and_values, self.jt_server)
+            joint_torques = get_joint_torques(targets_and_values, self.jt_server)
             # print(f"Joint torques: {joint_torques}")
-            joint_torques = jnp.zeros((NUM_ENVS, ROBOT_JOINTS))
+            # joint_torques = jnp.zeros((NUM_ENVS, ROBOT_JOINTS))
             data = step_mjx_env_batch(self.mjx_model, data, joint_torques)
             # data = naive_step(self.mjx_model, data)
             
@@ -162,7 +165,9 @@ mjx_data = mjx.put_data(mj_model, mj_data)
 
 rng = jax.random.PRNGKey(0)
 rng = jax.random.split(rng, NUM_ENVS)
-batched_data = jax.vmap(lambda rng: mjx_data.replace(qpos=jax.random.uniform(rng, (ROBOT_JOINTS,))))(rng)
+# batched_data = jax.vmap(lambda rng: mjx_data.replace(qpos=jax.random.uniform(rng, (ROBOT_JOINTS,))))(rng)
+
+batched_data = jax.vmap(lambda _: mjx_data.replace(qpos=HOME_QPOS))(rng)
 
 ctx = zmq.Context()
 jt_socket = ctx.socket(zmq.REQ)
@@ -173,6 +178,7 @@ q_pos = contactRichEnv.get_qpos(batched_data)
 ee_pos = contactRichEnv.get_eepos(batched_data)
 
 print(f"ee pos beginning = {ee_pos}")
+print(f"q pos beginning = {q_pos}")
 
 batched_data = contactRichEnv.move_to_targets(batched_data)
 
