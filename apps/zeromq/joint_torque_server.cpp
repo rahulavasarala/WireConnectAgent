@@ -28,8 +28,8 @@ void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot,
     VectorXd robot_q = Map<const VectorXf>(qpos, ROBOT_GRIPPER_JOINTS).cast<double>();
     VectorXd robot_dq = Map<const VectorXf>(qvel, ROBOT_GRIPPER_JOINTS).cast<double>();
 
-    std::cout << "Robot q: " << robot_q << std::endl;
-    std::cout << "Robot dq: " << robot_dq << std::endl;
+    // std::cout << "Robot q: " << robot_q << std::endl;
+    // std::cout << "Robot dq: " << robot_dq << std::endl;
 
     robot->setQ(robot_q);
     robot->setDq(robot_dq);
@@ -50,8 +50,8 @@ void compute_robot_joint_torques(std::shared_ptr<SaiModel::SaiModel> robot,
                       static_cast<double>(des_cart_orient[2]));
     Matrix3d orient = qd.normalized().toRotationMatrix();
 
-    std::cout << "goal orient: " <<  orient << std::endl;
-    std::cout << "goal pos: " << goalPos << std::endl;
+    // std::cout << "goal orient: " <<  orient << std::endl;
+    // std::cout << "goal pos: " << goalPos << std::endl;
     motion_force_task->setGoalOrientation(orient);
 
     motion_force_task->updateTaskModel(MatrixXd::Identity(robot->dof(), robot->dof()));
@@ -66,11 +66,13 @@ int main() {
     // Initialize per-env robots and tasks
     for (int i = 0; i < num_envs; ++i) {
         robot_pool[i] = std::make_shared<SaiModel::SaiModel>(robot_file, false);
-        Vector3d control_point = Vector3d(0, 0, 0);
+        Vector3d control_point = Vector3d(0, 0, 0.36);
         Affine3d control_frame = Affine3d::Identity();
         control_frame.translation() = control_point;
         mft_pool[i] = std::make_shared<SaiPrimitives::MotionForceTask>(robot_pool[i], "fr3_link7", control_frame);
         jt_pool[i] = std::make_shared<SaiPrimitives::JointTask>(robot_pool[i]);
+        mft_pool[i]->setPosControlGains(400, 40, 0);
+	    mft_pool[i]->setOriControlGains(400, 40, 0);
         mft_pool[i]->disableInternalOtg();
     }
 
@@ -89,8 +91,8 @@ int main() {
             continue;
         }
 
-        std::cout << "request count: " << request_count << std::endl;
-        request_count += 1;
+        // std::cout << "request count: " << request_count << std::endl;
+        // request_count += 1;
 
         const float* joint_data = static_cast<const float*>(request.data());
         float output_torques[num_envs * ROBOT_GRIPPER_JOINTS];

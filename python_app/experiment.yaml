@@ -1,26 +1,37 @@
-name: "hype"
+name: "wire_connect_transformer_1013"
+task: "wc"
 alpha: 3.5
 beta: 1
-dist_weight: 1
-orient_weight: 1
-num_phys_steps: 170
-actions_per_episode: 60
-trans_noise: 0.001
-orient_noise: 0
-max_force_thresh: 0.1
-max_rotation_thresh: 0.01
-max_displacement_thresh: 0.002
-success_dist_thresh: 0.003
+dist_weight: 1.5
+orient_weight: 0.5
+hz: 15
+actions_per_episode: 50
+trans_noise: 0.002
+orient_noise: 0.005
+z_space: 0.01
+max_force_thresh: 2.0
+max_rotation_thresh: 0.002
+max_displacement_thresh: 0.0003
 success_reward: 100
-out_of_bounds_penalty: -10
-mating_offset: 0
+out_of_bounds_penalty: -100
 
-reward: "custom_pos_orient" # could be set to nvidia reward
+reward: "6d"
 
-saturation_radius: 0.04
-saturation_theta: 0.1423
+zone:
+  shape: "cyl"
+  center: [0,0,0]
+  radius: 0.005
+  height: 0.5
+  
+orient_scale: 0.1423
 
-train_steps : 100000 # 666 epochs
+action_horizon: 1
+exec_actions: 1
 
+obs_stack: 3
+obs_key: ["task_points", "tool", "force"]
+
+train_steps : 40000 # 666 epochs
 debug: false
+nominal: true
 

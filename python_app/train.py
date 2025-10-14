@@ -16,17 +16,16 @@ from policy_network import Agent, TransformerAgent
 
 import mujoco
 import zmq
-from WireConnectAgent.python_app.contact_rich_env import ContactRichEnv
+from contact_rich_env import ContactRichEnv
 from utils import count_subdirectories
 from utils import params_from_yaml
 import shutil
 
+
 # -------------Init ----------------------------------------
-mj_xml_path = "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3peghole.xml"
+mj_xml_path = "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3wireconnect.xml"
 mj_model = mujoco.MjModel.from_xml_path(mj_xml_path)
 mj_data = mujoco.MjData(mj_model)
-task_points = np.array([[0.005, 0.005, 0], [-0.005, 0.005, 0], [-0.005, -0.005, 0], [0.005, -0.005, 0]]).T
-tool_points = np.array([[0.005, -0.005, 0.2], [-0.005, -0.005, 0.2], [-0.005, 0.005, 0.2], [0.005, 0.005, 0.2]]).T
 
 ctx = zmq.Context()
 
@@ -145,8 +144,11 @@ if __name__ == "__main__":
     shutil.copyfile("./experiment.yaml", f"./runs/run_{params["name"]}/experiment_{params["name"]}.yaml")
     
     # env setup
-    envs = ContactRichEnv(servers = [jt_socket, mft_socket, fspf_socket], model= mj_model, data = mj_data, task_base_points=task_points, tool_base_points=tool_points, params = params)
+    envs = ContactRichEnv(servers = [jt_socket, mft_socket, fspf_socket], model= mj_model, data = mj_data, params = params)
     envs.train()
+
+    print("Sleeping before train!!!")
+    time.sleep(2)
 
     observation_space_dim = envs.obs_size * envs.obs_stack
     action_space_dim = envs.action_horizon * 7 

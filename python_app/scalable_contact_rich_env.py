@@ -16,61 +16,21 @@ import jax.numpy as jnp
 import jax.tree_util as tree_util
 
 from utils import send_and_recieve_to_server
+from jax_utils import extract_pos_orient_keypoints, generate_random_sphere_point, rotmat_to_quat, euler_to_rotmat
 
 ROBOT_JOINTS = 7
 NUM_ENVS = 1
 mj_model = mujoco.MjModel.from_xml_path("../models/scenes/fr3peghole_modified.xml")
 mj_data = mujoco.MjData(mj_model)
+tool_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_KEY, "tool")
+task_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_KEY, "task")
 link7_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, "fr3_link7")
 home_key_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_KEY, "home")
 home_qpos = mj_model.key_qpos[home_key_id]
 HOME_QPOS = jnp.array(home_qpos)
 
-def rotmat_to_quat(R: jnp.ndarray) -> jnp.ndarray:
-    """Convert 3x3 rotation matrix to quaternion [x, y, z, w]."""
-    trace = jnp.trace(R)
-
-    def case1(_):
-        qw = jnp.sqrt(1.0 + trace) / 2.0
-        qx = (R[2, 1] - R[1, 2]) / (4.0 * qw)
-        qy = (R[0, 2] - R[2, 0]) / (4.0 * qw)
-        qz = (R[1, 0] - R[0, 1]) / (4.0 * qw)
-        return jnp.array([qx, qy, qz, qw])
-
-    def case2(_):
-        cond_x = (R[0, 0] > R[1, 1]) & (R[0, 0] > R[2, 2])
-        cond_y = R[1, 1] > R[2, 2]
-
-        def branch_x(_):
-            s = jnp.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2]) * 2.0
-            qw = (R[2, 1] - R[1, 2]) / s
-            qx = 0.25 * s
-            qy = (R[0, 1] + R[1, 0]) / s
-            qz = (R[0, 2] + R[2, 0]) / s
-            return jnp.array([qx, qy, qz, qw])
-
-        def branch_y(_):
-            s = jnp.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2]) * 2.0
-            qw = (R[0, 2] - R[2, 0]) / s
-            qx = (R[0, 1] + R[1, 0]) / s
-            qy = 0.25 * s
-            qz = (R[1, 2] + R[2, 1]) / s
-            return jnp.array([qx, qy, qz, qw])
-
-        def branch_z(_):
-            s = jnp.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1]) * 2.0
-            qw = (R[1, 0] - R[0, 1]) / s
-            qx = (R[0, 2] + R[2, 0]) / s
-            qy = (R[1, 2] + R[2, 1]) / s
-            qz = 0.25 * s
-            return jnp.array([qx, qy, qz, qw])
-
-        return jax.lax.cond(cond_x, branch_x, 
-                            lambda _: jax.lax.cond(cond_y, branch_y, branch_z, None),
-                            None)
-
-    return jax.lax.cond(trace > 0.0, case1, case2, None)
-
+#Master key for all random number generation
+master_key = jax.random.PRNGKey(42)
 
 def get_joint_torques(targets_and_values: jnp.array, jt_server) -> jnp.array:
 
@@ -123,16 +83,40 @@ def get_qvel(data: mjx.Data):
 
 get_qvel_batch = jax.jit(jax.vmap(get_qvel))
 
+def create_noisy_task_points_single_env(data: mjx.Data, task_points: jnp.array, key, orient_noise, pos_noise):
+
+    key1, key2 = jax.random.split(key)
+
+    #start with the task points, and create a random noise
+
+    task_pos = data.xpos[task_id]
+    task_orient = data.xmat[task_id]
+
+    random_euler_angle = orient_noise * generate_random_sphere_point(key1)
+    random_translation = pos_noise * generate_random_sphere_point(key2)
+
+    rotation_matrix = euler_to_rotmat(random_euler_angle)
+
+    task_orient_prime = rotation_matrix*task_orient
+    task_pos_prime = task_pos + random_translation
+
+    return task_orient_prime @ task_points + task_pos_prime
+
+create_noisy_task_points_batch = jax.jit(jax.vmap(create_noisy_task_points_single_env, in_axes = (0, 0, 0, None, None)))
+
 class ParallelContactRichEnv:
 
-    def __init__(self ,servers, mjx_model, model):
-
+    def __init__(self ,servers, mjx_model, model, task_points, tool_points):
         self.mjx_model = mjx_model
-
         self.jt_server = servers[0]
 
         self.target_pos = jnp.tile(jnp.array([0.3, 0.4, 0.3]), (NUM_ENVS, 1))
         self.target_orient = jnp.tile(jnp.array([[1,0,0], [0, -1, 0], [0,0,-1]]), (NUM_ENVS, 1,1))
+
+        self.quick_reset_positions = jnp.zeros(NUM_ENVS, ROBOT_JOINTS)
+
+        self.model = model
+
 
     def move_to_targets(self, data, iterations = 5000):
 
@@ -151,14 +135,28 @@ class ParallelContactRichEnv:
 
         return data
     
-    def get_qpos(self, data):
-        return get_qpos_batch(data)
+    def reset(self, data):
+
+        pass
+
     
-    def get_eepos(self, data):
-        return get_eepos_batch(data)
+    def create_noisy_task_points():
+
+        pass
+
+    def find_success_thresh():
+
+        pass
+
     
-    def get_qvel(self,data):
-        return get_qvel_batch(data)
+
+
+
+
+
+
+    
+    
 
 mjx_model = mjx.put_model(mj_model)
 mjx_data = mjx.put_data(mj_model, mj_data)
@@ -174,20 +172,6 @@ jt_socket = ctx.socket(zmq.REQ)
 jt_socket.connect("ipc:///tmp/zmq_torque_server")
 
 contactRichEnv = ParallelContactRichEnv([jt_socket], mjx_model, mj_model)
-q_pos = contactRichEnv.get_qpos(batched_data)
-ee_pos = contactRichEnv.get_eepos(batched_data)
-
-print(f"ee pos beginning = {ee_pos}")
-print(f"q pos beginning = {q_pos}")
-
-batched_data = contactRichEnv.move_to_targets(batched_data)
-
-q_pos = contactRichEnv.get_qpos(batched_data)
-ee_pos = contactRichEnv.get_eepos(batched_data)
-
-print(f"ee pos final = {ee_pos}")
-
-print("Finished!!!!!")
 
 
 

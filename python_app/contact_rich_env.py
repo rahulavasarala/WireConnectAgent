@@ -13,13 +13,13 @@ import yaml
 
 from utils import compute_geodesic_distance, RewardsModuleV2, get_force_data, get_velocity_data, fetch_body_id, fetch_body_pos_orient
 from utils import extract_pos_orient_keypoints, generate_random_sphere_point, switch_frame_key_points, params_from_yaml
-from utils import send_and_recieve_to_server, get_joint_torques, get_mft_torques, realize_points_in_frame, check_out_of_bounds
+from utils import send_and_recieve_to_server, get_joint_torques, get_mft_torques, realize_points_in_frame, check_out_of_bounds, TaskModule
 
 ROBOT_JOINTS = 7
 
 class ContactRichEnv:
 
-    def __init__(self ,servers, model, data, task_base_points, tool_base_points, params, tool_start_info = None):
+    def __init__(self ,servers, model, data, params, tool_start_info = None):
 
         self.step_count = 0
         self.model = model
@@ -28,9 +28,6 @@ class ContactRichEnv:
         self.jt_server = servers[0]
         self.mft_server= servers[1]
         self.fspf_server = servers[2]
-
-        self.task_base_points = task_base_points
-        self.tool_base_points = tool_base_points
 
         self.reward_module = RewardsModuleV2()
 
@@ -54,6 +51,8 @@ class ContactRichEnv:
 
         data.qpos[:] = home_qpos
         data.qvel[:] = np.zeros(7)
+
+        print(f"set the robot's joint positions to: {home_qpos}")
 
         mujoco.mj_step(self.model, data)
 
@@ -92,6 +91,9 @@ class ContactRichEnv:
         self.run_name = params["name"]
         self.min_dist = 1
 
+        task_module = TaskModule()
+        self.task_base_points, self.tool_base_points = task_module.get_task_tool_points(params["task"])
+
     def find_success_thresh(self, data, iterations = 500):
         self.reset(data)
         self.success_thresh = 0
@@ -100,18 +102,23 @@ class ContactRichEnv:
         z_axis = self.tool_frame_orient[:, 2]
         target_pos = self.tool_frame_pos + 0.3 * z_axis
 
-
         for _ in range(iterations):
-            self.move_to_targets(data, target_pos, self.tool_frame_orient)
+            self.move_to_targets(data, target_pos, self.tool_frame_orient, iterations = 1)
 
             force, _ = get_force_data(self.model, data)
 
+            tool_pos, _ = extract_pos_orient_keypoints(self.get_tool_points(data))
+            print(f"tool position is : {tool_pos}, {force}")
+
             if np.linalg.norm(force) > 3:
-                dist = self.reward_module.select_reward("dist", self.get_tool_points(data), self.get_task_points(data), {})
+                
+
+                dist = self.reward_module.select_reward("dist", self.get_tool_points(data), self.get_noisy_task_points(data), {})
 
                 self.success_thresh = 0.75 * dist
                 self.dist_scale = 1.5 * dist
                 print(f"Set the success threshold!!! {dist} {self.success_thresh} , set dist scale: {self.dist_scale}")
+                
 
                 break
 
@@ -144,20 +151,25 @@ class ContactRichEnv:
 
     def create_noisy_task_points(self, data):
 
-        task_points = self.get_task_points(data)
-        task_points_pos, _ = extract_pos_orient_keypoints(task_points)
-        task_points_pos = task_points_pos.reshape((3,1))
+        task_id = fetch_body_id(self.model, data, "task", obj_type = "body")
+        t_p, t_o = fetch_body_pos_orient(data, task_id)
 
-        random_euler_angle = np.zeros(3)
+        task_points = t_o @ self.task_base_points + t_p.reshape(3,1)
+
+        task_pos, _ = extract_pos_orient_keypoints(task_points)
+
+        print(f"task pos: {task_pos}")
+
         random_euler_angle = self.orient_noise * generate_random_sphere_point()
-
         rand_rotation = R.from_euler("xyz", random_euler_angle).as_matrix()
 
-        task_points_noise = rand_rotation @ (task_points - task_points_pos) + task_points_pos
+        task_points_noise = rand_rotation @ (task_points - task_pos.reshape(3,1)) + task_pos.reshape(3,1)
+
         rand_trans_noise = self.trans_noise * generate_random_sphere_point()
-        task_points_noise = rand_trans_noise.reshape((3,1)) + task_points_noise
+        task_points_noise = rand_trans_noise.reshape(3,1) + task_points_noise
 
         self.task_points_noise = task_points_noise
+        print(f"created noisy task points: {self.task_points_noise}")
 
     def create_start_frame(self, data):
         task_pos, task_orient = extract_pos_orient_keypoints(self.task_points_noise)
@@ -165,6 +177,8 @@ class ContactRichEnv:
 
         self.tool_frame_pos = task_pos - self.z_space * z_axis.reshape(3)
         self.tool_frame_orient = task_orient
+
+        print(f"created tool_frame_pos: {self.tool_frame_pos}, created tool frame orient: {self.tool_frame_orient}")
 
     def load_tool_start_info(self, tool_start_info):
         self.tool_frame_pos = tool_start_info[:3]
@@ -177,7 +191,10 @@ class ContactRichEnv:
         np.savetxt(f"./runs/run_{self.run_name}/tool_start_info.txt", tool_start_info)
 
     def initialize_quick_reset_positions(self, data):
+        print(f"tool_frame_pos: {self.tool_frame_pos}, tool_frame_orient: {self.tool_frame_orient}".format())
         self.move_to_targets(data, self.tool_frame_pos, self.tool_frame_orient, iterations = 20000)
+        tool_pos, _ = self.get_tool_pos_orient(data)
+        print(f"robot position after reset is: {tool_pos}")
         self.quick_reset_positions = data.qpos.copy()
 
     def move_to_targets(self, data, target_pos, target_orient, iterations = 500):
@@ -205,7 +222,7 @@ class ContactRichEnv:
         return tool_pos, tool_orient
 
     def get_task_points(self, data):
-        return self.task_points_noise
+        return self.task_base_points
     
     def get_noisy_task_points(self, data):
         return self.task_points_noise

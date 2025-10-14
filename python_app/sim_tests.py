@@ -15,8 +15,6 @@ from scipy.spatial.transform import Rotation as R
 
 
 launch_params = params_from_yaml("./sim_tests_config.yaml")
-task_points = np.array([[0.005, 0.005, 0], [-0.005, 0.005, 0], [-0.005, -0.005, 0], [0.005, -0.005, 0]]).T
-tool_points = np.array([[0.005, -0.005, 0.2], [-0.005, -0.005, 0.2], [-0.005, 0.005, 0.2], [0.005, 0.005, 0.2]]).T
 
 
 mj_xml_path = launch_params["xml_path"]
@@ -93,7 +91,7 @@ def cursor_position_callback(window, xpos, ypos):
     mujoco.mjv_moveCamera(mj_model, action, dx / height, dy / height, scene, cam)
     
 class Simulation():
-    def __init__(self, visual_config_file, tool_points, task_points):
+    def __init__(self, visual_config_file):
         visual_config = params_from_yaml(visual_config_file)
         self.action_type = visual_config["action_type"]
         run_name = visual_config["model"]["run_name"]
@@ -101,7 +99,7 @@ class Simulation():
         params = params_from_yaml(f"{visual_config["model"]["run_dir"]}/run_{run_name}/experiment_{run_name}.yaml")
         tool_start_info = np.loadtxt(f"./runs/run_{run_name}/tool_start_info.txt")
 
-        self.env = ContactRichEnv([jt_socket, mft_socket, fspf_socket], model=mj_model, data= mj_data, task_base_points=task_points, tool_base_points=tool_points, params = params, tool_start_info=tool_start_info)
+        self.env = ContactRichEnv([jt_socket, mft_socket, fspf_socket], model=mj_model, data= mj_data, params = params, tool_start_info=tool_start_info)
         self.debug = visual_config["debug"]
 
         self.env.eval()
@@ -204,7 +202,7 @@ def main():
     global mj_data
     RHZ = 60.0
     
-    test = Simulation("./visual_tests_config.yaml", tool_points, task_points)
+    test = Simulation("./sim_tests_config.yaml")
     
     # Reset simulation
     test.reset(mj_data)

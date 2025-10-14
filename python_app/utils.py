@@ -1,11 +1,12 @@
-import os
-import yaml
-from scipy.spatial.transform import Rotation as R
 import numpy as np
 import mujoco
-import mujoco
 import math
+import yaml
+from scipy.spatial.transform import Rotation as R
 import struct 
+import os
+
+ROBOT_JOINTS = 7
 
 def count_subdirectories(path):
     if not os.path.isdir(path):
@@ -19,17 +20,6 @@ def count_subdirectories(path):
             count += 1
     return count
 
-def compute_theta_distance(orient1, orient2):
-
-    quat1 = R.from_matrix(orient1).as_quat()
-    quat2 = R.from_matrix(orient2).as_quat()
-
-    dot = np.abs(np.dot(quat1, quat2))
-    dot = np.clip(dot, -1.0, 1.0)
-    angle_rad = 2 * np.arccos(dot) 
-
-    return angle_rad
-
 def params_from_yaml(yaml_path : str):
 
     with open(yaml_path, 'r') as stream:
@@ -37,217 +27,106 @@ def params_from_yaml(yaml_path : str):
 
     return params
 
-class MjObserver():
+def fetch_body_id(mj_model, data, body_name, obj_type = "body"):
 
-    def __init__(self, mj_model, mj_data):
-        self.id_data = {}
+    body_id = None
 
-        self.id_data["force_sensor"] = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "force_sensor")
-        self.id_data["torque_sensor"] = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "torque_sensor")
-        self.id_data["site"] = mj_model.sensor_objid[self.id_data["force_sensor"]]
+    if obj_type == "geom":
+        body_id = data.geom(body_name).id
+    elif obj_type == "body":
+        body_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, body_name)
 
-        self.id_data["male"] = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, "male-connector-minimal")
-        self.id_data["female"] = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, "female-connector-truncated")
-        self.id_data["link_7"] = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, "link7")
+    return body_id
 
-        self.id_data["male_1"] = mj_data.geom('keypoint_male_1').id
-        self.id_data["male_2"] = mj_data.geom('keypoint_male_2').id
-        self.id_data["male_3"] = mj_data.geom('keypoint_male_3').id
-        self.id_data["male_4"] = mj_data.geom('keypoint_male_4').id
+def fetch_body_pos_orient(data, body_id, point = None, frame = None, quat = False):
 
-        self.id_data["female_1"] = mj_data.geom('keypoint_female_1').id
-        self.id_data["female_2"] = mj_data.geom('keypoint_female_2').id
-        self.id_data["female_3"] = mj_data.geom('keypoint_female_3').id
-        self.id_data["female_4"] = mj_data.geom('keypoint_female_4').id
+    pos = data.xpos[body_id]
+    orient = data.xmat[body_id].reshape(3,3)
 
-        self.id_data["control_point"] = mj_data.geom('keypoint_control').id
+    if quat:
+        orient = data.xquat[body_id]
+        orient = R.from_quat(np.array([orient[1], orient[2], orient[3], orient[0]])).as_matrix()
 
-        self.id_data["force_sensor_adr"] = mj_model.sensor_adr[self.id_data["force_sensor"]]
-        self.id_data["torque_sensor_adr"] = mj_model.sensor_adr[self.id_data["torque_sensor"]]
-
-    def get(self, id):
-        return self.id_data[id]
+    if point is None or frame is None:
+        return pos, orient
     
-    #These functions are unsafe for certain inputs
-    def get_pos_orient(self, data , body_name, pos = None, frame = None, quat = False):
+    return frame.T @ (pos - point), frame.T @ orient
 
-        if (pos is not None and frame is None) or (pos is None and frame is not None):
-            raise ValueError("get_pos_orientation error: both pos and frame have to have values or be empty!")
+def extract_pos_orient_keypoints(key_points: np.ndarray):
 
-        pos_world = data.xpos[self.id_data[body_name]]
-        
-        orient_world = data.xmat[self.id_data[body_name]].reshape(3,3)
+    pos = np.mean(key_points, axis = 1)
 
-        if quat:
-            orient_world = data.xquat[self.id_data[body_name]]
-            orient_world = R.from_quat(orient_world).as_matrix()
+    orient = np.zeros((3,3))
 
-        if pos is None:
-            return pos_world, orient_world
-        
-        if frame.shape[-1] == 4:
-            frame = R.from_quat(frame).as_matrix()
-        
-        pos_frame = frame.T @(pos_world - pos)
-        orient_frame = frame.T @ orient_world
+    orient[:,0] = key_points[:,0] - key_points[:,1]
+    orient[:, 0] = orient[:, 0]/np.linalg.norm(orient[:,0])
+    orient[:,1] = key_points[:,2] - key_points[:,1]
+    orient[:,1] = orient[:,1]/np.linalg.norm(orient[:,1])
+    orient[:, 2] = np.cross(orient[:,0], orient[:,1]) 
 
-        return pos_frame, orient_frame
-    
-def get_key_points_male(observer: MjObserver, data, mating_offset, pos = None, frame = None):
-    key_points_male = np.array([[0.007, 0.007, -0.007, -0.007],
-                                        [0.0, 0.0 , 0.0, 0.0], 
-                                        [0.0, 0.01, 0.01, 0.0]])
-    
-    key_points_male -= (mating_offset * np.array([0, 1, 0])).reshape(3,1)
+    return pos, orient
 
-    male_pos, male_orient = observer.get_pos_orient(data, "male")
-    key_points_world = male_orient @ key_points_male + male_pos.reshape(3,1)
+def generate_random_sphere_point():
+    random_vector = np.random.randn(3)
 
-    if pos is None:
-        return key_points_world
-    
-    return frame.T @(key_points_world - pos.reshape(3,1))
+    norm_val = np.linalg.norm(random_vector)
 
-# def get_key_points_female(observer: MjObserver, data, pos = None, frame = None): 
-#     key_points_female = np.array([[-0.007, -0.007, 0.007, 0.007],
-#                                     [0.0, 0.008 , 0.008, 0.0], 
-#                                     [0.0, 0.0, 0.0, 0.0]])
-    
-#     female_pos, female_orient = observer.get_pos_orient(data, "female")
-#     key_points_world = female_orient @ key_points_female + female_pos.reshape(3,1)
+    if norm_val == 0:
+        return np.array([0.0, 0.0, 0.0])
 
-#     if pos is None:
-#         return key_points_world
-    
-#     return frame.T @ (key_points_world - pos.reshape(3,1))
-        
-def get_velocity_reading(observer: MjObserver ,data, frame = None):
-    vel = data.cvel[observer.get("male_body_id"), :3]
+    unit_vector = random_vector / norm_val
+    return unit_vector
+
+def get_force_data(model, data, frame_orient = None):
+    # Get sensor id
+    force_sensor_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SENSOR, "force_sensor")
+    torque_sensor_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SENSOR, "torque_sensor")
+    force_adr = model.sensor_adr[force_sensor_id]
+    torque_adr = model.sensor_adr[torque_sensor_id]
+
+    # Force in local site frame
+    f_local = data.sensordata[force_adr:force_adr+3]
+    t_local = data.sensordata[torque_adr:torque_adr+3]
+
+    # Get the site the sensor is attached to
+    site_id = model.sensor_objid[force_sensor_id]  
+    site_xmat = data.site_xmat[site_id].reshape(3, 3)  # rotation matrix from site to world
+
+    # Rotate force into world frame
+    f_world = site_xmat @ f_local
+    t_world = site_xmat @ t_local
+
+    if frame_orient is not None:
+        return frame_orient.T @ f_world, frame_orient.T @ t_world
+    return f_world, t_world
+
+
+def get_velocity_data(model, data, frame = None):
+
+    tool_id = fetch_body_id(model, data, "tool")
+    vel = data.cvel[tool_id, :3]
 
     if frame is None:
         return vel
     
     return frame.T @ vel
 
-def get_force_torque_sensor_reading(observer: MjObserver, data, frame = None):
-    fs_adr = observer.get("force_sensor_adr")
-    ts_adr = observer.get("torque_sensor_adr")
-
-    force = data.sensordata[ fs_adr : fs_adr + 3]
-    _, force_sensor_orient = observer.get_pos_orient(data, "force_sensor")
-    
-    torque = data.sensordata[ts_adr : ts_adr + 3]
-
-    force_world = force_sensor_orient @ force
-    torque_world = force_sensor_orient @ torque
-
-    if frame is None:
-        return force_world, torque_world
-    
-    return frame.T @ force_world, frame.T @ torque_world
-
-def get_male_pos_orient(observer: MjObserver, data, pos= None, frame = None, quat = False):
-
-    _, male_orient = observer.get_pos_orient(data, "link_7", pos, frame, quat)
-    male_pos , _ = observer.get_pos_orient(data, "male", pos, frame)
-
-    return male_pos, male_orient
-
 def realize_points_in_frame(points, pos, frame):
     return frame.T @(points - pos.reshape(3,1))
 
-def show_keypoints(observer, data, params, metadata):
-    male_key_points_world = get_key_points_male(observer, data, params["mating_offset"])
+#assume that the key points come in the world frame
+def switch_frame_key_points(key_points, pos, frame):
+    key_points_transformed = frame.T @ (key_points - pos.reshape(3,1))
 
-    female_key_points_world = metadata["female_key_points"]
+    return key_points_transformed
 
-    male_pos , _ = get_male_pos_orient(observer, data)
+def compute_geodesic_distance(orient1, orient2):
 
-    for i in range(4):
-        data.geom_xpos[observer.get(f"male_{i+1}")] = male_key_points_world[:, i].reshape(3,)
-        data.geom_xpos[observer.get(f"female_{i+1}")] = female_key_points_world[:,i].reshape(3,)
+    arg = (np.trace(orient1 @ orient2.T) -1)/2
+    arg_clamped = np.clip(arg, -1.0, 1.0)
+    angle_rad = np.arccos(arg_clamped) 
 
-    data.geom_xpos[observer.get("control_point")] = male_pos.reshape(3,)
-
-    return data
-    
-
-class RewardModule():
-    def __init__(self, debug):
-
-        self.debug = debug
-
-    def custom_pos_orientation_reward(self, observer: MjObserver, data, params, metadata, telemetry):
-
-        key_points_male = get_key_points_male(observer, data, params["mating_offset"])
-        key_points_female = metadata["female_points_world"]
-
-        average_male_point = np.mean(key_points_male, axis = 1)
-        average_female_point = np.mean(key_points_female, axis = 1)
-
-        dist = np.linalg.norm(average_male_point - average_female_point)
-        telemetry["min_dist"] = min(telemetry["min_dist"], dist)
-    
-        _, male_orientation = get_male_pos_orient(observer, data , quat = True)
-        angle_rad = compute_theta_distance(male_orientation, metadata["init_orient"])
-
-        norm_angle_rad = angle_rad/params["saturation_theta"]
-        norm_distance = dist/(params["saturation_radius"] - params["mating_offset"])
-
-        total_error = params["orient_weight"] * norm_angle_rad+params["dist_weight"] * norm_distance
-
-        continuous_reward = continuous_reward_func(params["alpha"], params["beta"],total_error)
-
-        if self.debug:
-            print(f"norm_distance is: {norm_distance}, norm angle: {angle_rad}, total_error : {total_error}, cont reward: {continuous_reward}")
-
-
-        discrete_reward = 0
-
-        if dist < params["success_dist_thresh"]:
-            discrete_reward += params["success_reward"]
-        
-        if telemetry["out_of_bounds"]:
-            discrete_reward -= params["out_of_bounds_penalty"]
-
-        return continuous_reward + discrete_reward
-
-
-    def distance_reward(self, observer: MjObserver, data, params, metadata, telemetry):
-        key_points_male = get_key_points_male(observer, data, params["mating_offset"])
-        key_points_female = metadata["female_points_world"]
-
-        average_male_point = np.mean(key_points_male, axis = 1)
-        average_female_point = np.mean(key_points_female, axis = 1)
-
-        dist = np.linalg.norm(average_male_point - average_female_point)
-
-        telemetry["min_dist"] = min(dist, telemetry["min_dist"])
-
-        norm_distance = dist/(params["saturation_radius"] - params["mating_offset"])
-        
-        continuous_reward = continuous_reward_func(params["alpha"], params["beta"], norm_distance)
-
-        if self.debug:
-            print(f"norm_distance is: {norm_distance}, cont reward: {continuous_reward}")
-
-        discrete_reward = 0
-
-        if dist < params["success_dist_thresh"]:
-            discrete_reward += params["success_reward"]
-        
-        if telemetry["out_of_bounds"]:
-            discrete_reward -= params["out_of_bounds_penalty"]
-
-        return continuous_reward + discrete_reward
-
-    def call(self, observer: MjObserver, data, params, metadata,telemetry, reward_type):
-        if reward_type == "distance":
-            return self.distance_reward(observer, data, params, metadata, telemetry)
-        elif reward_type == "custom_pos_orient":
-            return self.custom_pos_orientation_reward(observer, data, params, metadata, telemetry)
-        
-        return -1
+    return angle_rad
 
 def continuous_reward_func(a: float, b: float, x: float) -> float:
     exp_ax = math.exp(a * x)
@@ -259,19 +138,172 @@ def continuous_reward_func(a: float, b: float, x: float) -> float:
 
     return r
 
-#helper function which communicates to the zmq server
 
+class RewardsModuleV2():
 
+    def __init__(self):
+
+        pass
+
+    def select_reward(self, reward_type, tool_key_points, task_key_points, metadata):
+        if reward_type == "6d":
+            return self.sixd_orient_error(tool_key_points, task_key_points, metadata)
+        elif reward_type == "dist":
+            return self.dist(tool_key_points, task_key_points)
         
+        return 0
 
+    def sixd_orient_error(self, tool_key_points, task_key_points, metadata):
 
+        dist_weight = metadata["dist_weight"]
+        orient_weight = metadata["orient_weight"]
+        sat_dist = metadata["dist_scale"]
+        sat_theta = metadata["orient_scale"]
+        alpha = metadata["alpha"]
+        beta = metadata["beta"]
+        success_thresh = metadata["success_thresh"]
 
+        pos_tool, orient_tool = extract_pos_orient_keypoints(tool_key_points)
+        pos_task, orient_task = extract_pos_orient_keypoints(task_key_points)
+
+        angle_rad = compute_geodesic_distance(orient_tool, orient_task)
+
+        dist = np.linalg.norm(pos_tool - pos_task)
+
+        dist_norm = dist/sat_dist
+        theta_norm = angle_rad/sat_theta
+
+        total_error = dist_norm * dist_weight + theta_norm * orient_weight
+        
+        cont_reward = continuous_reward_func(alpha, beta, total_error)
+
+        disc_reward= 0
+
+        if metadata["out_of_bounds"]:
+            disc_reward -= 100
+
+        if dist < success_thresh:
+            disc_reward += 100
+
+        return cont_reward + disc_reward
     
+    def dist(self, tool_key_points, task_key_points):
 
+        pos_tool, _ = extract_pos_orient_keypoints(tool_key_points)
+        pos_task, _ = extract_pos_orient_keypoints(task_key_points)
 
+        dist = np.linalg.norm(pos_tool - pos_task)
 
+        return dist
+
+def params_from_yaml(yaml_path : str):
+
+    with open(yaml_path, 'r') as stream:
+        params = yaml.safe_load(stream)
+
+    return params
+
+def send_and_recieve_to_server(stacked_data: np.ndarray, socket) -> np.ndarray:#clean
+    packed_data = struct.pack('f' * stacked_data.shape[-1], *stacked_data)
+
+    socket.send(packed_data)
+    reply = socket.recv()
+    joint_torques = np.frombuffer(reply, dtype = np.float32) 
+
+    joint_torques = joint_torques.reshape(-1, ROBOT_JOINTS) 
+    return joint_torques
+
+def get_joint_torques(data, des_pos , des_orient, jt_socket):
+
+    des_orient_quat = R.from_matrix(des_orient).as_quat()
+
+    qpos = data.qpos.copy()      
+    qvel = data.qvel.copy() 
+
+    stacked_data = np.concatenate([des_pos, des_orient_quat, qpos, qvel])
+    joint_torques = send_and_recieve_to_server(stacked_data, jt_socket)
+    return joint_torques
+
+def get_mft_torques(des_pos, des_orient, qpos, qvel, motion_force_axis, force_dim, force_magnitude, dx_world, sigma_force, mft_socket):
+
+    dx = dx_world.reshape((3,1))
+
+    desired_force = sigma_force @ dx
+    if np.linalg.norm(desired_force) < 1e-5:
+        desired_force = np.zeros((3,))
+    else:
+        desired_force = force_magnitude * desired_force/np.linalg.norm(desired_force)
     
+    stacked_data = np.concatenate([des_pos, des_orient, qpos, qvel, motion_force_axis.flatten(), np.array([force_dim]), desired_force])
 
+    joint_torques = send_and_recieve_to_server(stacked_data, mft_socket)
+    return joint_torques
 
+def check_out_of_bounds(male_point, zone):
 
+    if zone["shape"] == "cyl":
+        in_z_bound = np.abs(male_point[2] - zone["center"][2]) < zone["height"]/2
+
+        in_base = np.linalg.norm(male_point[:2] - zone["center"][:2]) < zone["radius"]
+
+        if not in_z_bound or not in_base:
+            return True
+
+    elif zone["shape"] == "sphere":
+        if np.linalg.norm(np.array(zone["center"]) - zone) > zone["radius"]:
+            return True
+    
+    return False
+
+def show_key_points(model, data, tool_points, task_points): 
+
+    tool_id = fetch_body_id(model, data, "tool", obj_type = "body")
+    tool_pos, tool_orient = fetch_body_pos_orient(data, tool_id)
+
+    print(f"tool pos and orient is: {tool_pos} , {tool_orient}")
+
+    tool_points_world = tool_orient @ tool_points + tool_pos.reshape(3,1)
+
+    task_id = fetch_body_id(model, data, "task", obj_type = "body")
+    task_pos, task_orient = fetch_body_pos_orient(data, task_id)
+
+    task_points_world = task_orient @ task_points + task_pos.reshape(3,1)
+    
+    for i in range(4):
+        tool_point_id = fetch_body_id(model, data, f"tool_keypoint_{i+1}", "geom")
+        task_point_id = fetch_body_id(model, data, f"task_keypoint_{i+1}", "geom")
+        data.geom_xpos[tool_point_id] = tool_points_world[:, i].reshape(3,)
+        data.geom_xpos[task_point_id] = task_points_world[:, i].reshape(3,)
+
+    control_point_id = fetch_body_id(model, data, "control_point", "geom")
+    tool_pos, _ = extract_pos_orient_keypoints(tool_points_world)
+    data.geom_xpos[control_point_id] = tool_pos.reshape(3,)
+
+    return data
+
+class TaskModule():
+
+    def __init__(self):
+
+        self.task_points_ph = np.array([[0.005, 0.005, 0], [-0.005, 0.005, 0], [-0.005, -0.005, 0], [0.005, -0.005, 0]]).T
+        self.tool_points_ph = np.array([[0.005, -0.005, 0.2], [-0.005, -0.005, 0.2], [-0.005, 0.005, 0.2], [0.005, 0.005, 0.2]]).T
+
+        self.task_points_wc = np.array([
+            [-0.007,  0.0007, 0.0],
+            [ 0.007,  0.0007, 0.0],
+            [ 0.007,  0.01,   0.0],
+            [-0.007,  0.01,   0.0]
+            
+        ]).T
+        
+        self.tool_points_wc = np.array([[0.007, 0, 0],[-0.007, 0, 0], [-0.007, 0, 0.01], [0.007, 0, 0.01] ]).T
+        
+    def get_task_tool_points(self, task_name):
+
+        if task_name == "wc":
+            return self.task_points_wc, self.tool_points_wc
+        elif task_name == "ph":
+            return self.task_points_ph, self.tool_points_ph
+        
+        return None, None
 
