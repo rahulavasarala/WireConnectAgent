@@ -4,13 +4,15 @@ project (WireConnectingAgent)
 SET(CMAKE_BUILD_TYPE "Debug")  
 # SET(CMAKE_BUILD_TYPE "Release")  
 
-option(USE_SAI2 "Use SAI2-* libraries instead of SAI-* libraries" ON)
+option(USE_SAI2 "Use SAI2-* libraries instead of SAI-* libraries" OFF)
 
 if(USE_SAI2)
     message(STATUS "Using SAI2 libraries")
+    message(STATUS "DEBUG: Current source directory is: ${CMAKE_SOURCE_DIR}")
     include(${CMAKE_SOURCE_DIR}/cmake/FindSAI2.cmake)
 else()
     message(STATUS "Using SAI libraries")
+    message(STATUS "DEBUG: Current source directory is: ${CMAKE_SOURCE_DIR}")
     include(${CMAKE_SOURCE_DIR}/cmake/FindSAI.cmake)
 endif()
 

@@ -63,6 +63,7 @@
     <mesh name="link5_coll" file="./robots/panda/link5.stl"/>
     <mesh name="link6_coll" file="./robots/panda/link6.stl"/>
     <mesh name="link7_coll" file="./robots/panda/link7.stl"/>
+    
 
     <mesh name="holesim" file="./objects/peginhole/holesim.stl"/>
     <mesh name="geom0" file="./objects/peginhole/geometry_0.obj"/>
@@ -137,18 +138,8 @@
                       <joint name="fr3_joint7" axis="0 0 1" range="-3.0159 3.0159" actuatorfrcrange="-12 12"
                         armature="0.074" frictionloss="0.248" damping = "0.01"/>
                       <site name="force_site" pos="0 0 0"/>
+                      
 
-                        <!-- <body name="tool" pos="0 0 0.15">
-                
-                            <inertial pos="0 0 0" mass="0" diaginertia="0.0001 0.0001 0.0001"/>
-                            <geom name="point_mass_cylinder" type="cylinder"
-                            size="0.0235 0.2" 
-                            rgba="1 0 0 1"    
-                            contype="1" conaffinity="1" 
-                            group="2"/>  
-
-
-                        </body> -->
                         
                     </body>
                   </body>

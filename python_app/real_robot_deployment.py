@@ -173,7 +173,8 @@ class RealRobotEnv():
             time.sleep(0.001)
 
     def find_force_sensor_bias(self):
-        self.move_to_targets(target_pos =np.array([0.4, 0, 0.3]),  iterations= 2000)
+        self.move_to_targets(target_pos =np.array([0.4, 0, 0.3]),  iterations= 4000)
+        print("moved to targets!")
 
         polling_length = 2000
 
@@ -182,7 +183,7 @@ class RealRobotEnv():
         for i in range(polling_length):
             force_world, torque_world = self.get_force_data() 
 
-            # print(f"force world : {force_world}")
+            print(f"force world : {force_world}")
 
             force_torque = np.concatenate([force_world, torque_world]).reshape(6,)
 
@@ -228,6 +229,7 @@ class RealRobotEnv():
         #get the force data in the world frame
 
         tool_orient = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_ORIENT.value)))
+        print("tool_orient")
 
         force_world = tool_orient @ force_data
         torque_world = tool_orient @ torque_data
@@ -512,30 +514,30 @@ time.sleep(2)
 
 print("Resetting the robot!")
 
-real_robot_env.reset()
+# real_robot_env.reset()
 
 
-print(f"actual pos: {np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POS.value)))}, target point pos: {real_robot_env.target_pos}")
+# print(f"actual pos: {np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POS.value)))}, target point pos: {real_robot_env.target_pos}")
 
-print("starting real world robot deployment!")
+# print("starting real world robot deployment!")
 
-for i in range(20):
+# for i in range(20):
 
-    ## deploy the policy on the real robot
+#     ## deploy the policy on the real robot
 
-    # obs = real_robot_env.get_full_observation()
+#     # obs = real_robot_env.get_full_observation()
 
-    # obs = torch.tensor(obs, dtype = torch.float32)
-    # action, _, _, _ = agent.get_action_and_value(obs)
-    # action = action.cpu().numpy()
-    # action = action.reshape(7 * real_robot_env.action_horizon,)
+#     # obs = torch.tensor(obs, dtype = torch.float32)
+#     # action, _, _, _ = agent.get_action_and_value(obs)
+#     # action = action.cpu().numpy()
+#     # action = action.reshape(7 * real_robot_env.action_horizon,)
 
-    action = np.random.uniform(low=-1.0, high=1.0, size=(7,))
+#     action = np.random.uniform(low=-1.0, high=1.0, size=(7,))
     
 
-    real_robot_env.step(action)
+#     real_robot_env.step(action)
 
-    print(f"sigma motion: {real_robot_env.sigmaMotion}, dx world : {real_robot_env.dx_world}")
+#     print(f"sigma motion: {real_robot_env.sigmaMotion}, dx world : {real_robot_env.dx_world}")
 
 #and we are done!
 
