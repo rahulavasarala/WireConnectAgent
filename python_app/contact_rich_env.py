@@ -111,8 +111,6 @@ class ContactRichEnv:
             print(f"tool position is : {tool_pos}, {force}")
 
             if np.linalg.norm(force) > 3:
-                
-
                 dist = self.reward_module.select_reward("dist", self.get_tool_points(data), self.get_noisy_task_points(data), {})
 
                 self.success_thresh = 0.75 * dist
@@ -462,7 +460,8 @@ class ContactRichEnv:
             dtheta_tool = self.max_rotation_thresh * dtheta_tool/np.linalg.norm(dtheta_tool)
 
         if np.linalg.norm(magnitude_force) > self.max_force_thresh:
-            magnitude_force = self.max_force_thresh * magnitude_force/np.linalg.norm(magnitude_force)
+            magnitude_force = self.max_force_thresh
+
 
         R_dtheta_tool = R.from_euler("xyz", dtheta_tool).as_matrix()
 
@@ -511,6 +510,7 @@ class ContactRichEnv:
                 qvel = data.qvel.copy()
 
                 joint_torques = get_mft_torques(self.target_pos, self.target_orient, qpos, qvel, self.motion_or_force_axis, self.force_dim, self.desired_force_magnitude, self.dx_world, self.sigmaForce, self.mft_server)
+                
 
                 data.ctrl[:] = joint_torques
                 mujoco.mj_step(self.model, data)

@@ -1,9 +1,9 @@
-xml_path: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3wireconnect.xml"
+xml_path: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3peghole.xml"
 action_type: "model"
 
 model: #This is if we need it
   run_dir: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/python_app/runs"
-  run_name: "wire_connect_transformer_1013"
+  run_name: "peginhole_nocoll"
   iter: 100
 
 debug: True

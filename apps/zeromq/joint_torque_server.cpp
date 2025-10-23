@@ -66,7 +66,7 @@ int main() {
     // Initialize per-env robots and tasks
     for (int i = 0; i < num_envs; ++i) {
         robot_pool[i] = std::make_shared<SaiModel::SaiModel>(robot_file, false);
-        Vector3d control_point = Vector3d(0, 0, 0.36);
+        Vector3d control_point = Vector3d(0, 0, 0.3625);
         Affine3d control_frame = Affine3d::Identity();
         control_frame.translation() = control_point;
         mft_pool[i] = std::make_shared<SaiPrimitives::MotionForceTask>(robot_pool[i], "fr3_link7", control_frame);

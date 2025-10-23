@@ -17,37 +17,39 @@ import json
 from utils import compute_geodesic_distance, RewardsModuleV2, get_force_data, get_velocity_data, fetch_body_id, fetch_body_pos_orient
 from utils import extract_pos_orient_keypoints, generate_random_sphere_point, switch_frame_key_points, params_from_yaml
 from utils import send_and_recieve_to_server, get_joint_torques, get_mft_torques, realize_points_in_frame, check_out_of_bounds
+from utils import TaskModule
+from policy_network import TransformerAgent
 
 redis_client = redis.Redis()
 
 class RedisKeys(Enum):
 
-    ROBOT_QPOS = "robotqpos"
-    ROBOT_QVEL = "robotqvel"
-    FORCE_MOTION_AXIS = "forcemotionaxis"
-    FORCE_DIM = "forcedim"
-    DESIRED_FORCE = "desiredforce"
-    DESIRED_CARTESIAN_POSITION = "descartpos"
-    DESIRED_CARTESIAN_ORIENTATION = "descartorient"
-    CONTROL_POINT_POSITION = "controlpointposition"
-    CONTROL_POINT_ORIENTATION = "controlpointorientation"
-    MEASURED_FORCE = "measuredforce"
-    MEASURED_TORQUE = "measuredtorque"
+    JOINT_ANGLES_KEY = "sai::sensors::FrankaRobot::joint_positions"
+    JOINT_VELOCITIES_KEY = "sai::sensors::FrankaRobot::joint_velocities"
+    JOINT_TORQUES_COMMANDED_KEY = "sai::commands::FrankaRobot::control_torques"
 
-    
+    FORCE_SENSOR_KEY = "sai::sensors::FrankaRobot::ft_sensor::end-effector::force"
+    MOMENT_SENSOR_KEY = "sai::sensors::FrankaRobot::ft_sensor::end-effector::moment"
 
-#This guy only has eval mode
+    SMOOTHED_FORCE = "sai::sensors::FrankaRobot::ft_sensor::smoothed_force"
+    SMOOTHED_TORQUE = "sai::sensors::FrankaRobot::ft_sensor::smoothed_torque"
+    MOTION_FORCE_AXIS = "sai::sensors::FrankaRobot::motion_force_axis" #Type Eigen VectorXD x , y, z, dim
+    DESIRED_FORCE = "sai::sensors::FrankaRobot::desired_force"
+
+    TARGET_POS = "sai::sensors::FrankaRobot::target_pos"
+    TARGET_ORIENT = "sai::sensors::FrankaRobot::target_orient"
+
+    CONTROL_POINT_ORIENT = "sai::sensors::FrankaRobot::control_point_orient"
+    CONTROL_POINT_POS = "sai::sensors::FrankaRobot::control_point_pos"
+    CONTROL_POINT_VEL = "sai::sensors::FrankaRobot::control_point_vel"
+
 class RealRobotEnv():
 
-    def __init__(self,servers, model, data, task_base_points, tool_base_points, params, tool_start_info):
+    def __init__(self, fspf_server, params, tool_start_info):
 
         self.step_count = 0
-        self.model = model
 
-        self.fspf_server = servers[0]
-
-        self.task_base_points = task_base_points
-        self.tool_base_points = tool_base_points
+        self.fspf_server = fspf_server
 
         self.reward_module = RewardsModuleV2()
 
@@ -55,7 +57,7 @@ class RealRobotEnv():
         self.load_tool_start_info(tool_start_info)
         
 
-        self.count_observation_size(data)
+        self.count_observation_size()
 
     def initialize_parameters(self, params):
 
@@ -92,25 +94,27 @@ class RealRobotEnv():
         self.run_name = params["name"]
         self.min_dist = 1
 
+        task_module = TaskModule()
+        self.task_base_points, self.tool_base_points = task_module.get_task_tool_points(params["task"])
+
+        self.force_bias = np.zeros(3)
+        self.torque_bias = np.zeros(3)
+
     def load_tool_start_info(self, tool_start_info):
         self.tool_frame_pos = tool_start_info[:3]
         self.tool_frame_orient = R.from_quat(tool_start_info[3:7]).as_matrix()
         self.task_points_noise = tool_start_info[7:].reshape(3,4)
 
     def set_mft_redis_keys(self):
-
-        #This function takes all of the internal state of the environment and sets the redis keys to reflect that
-
-        redis_client.set(RedisKeys.DESIRED_CARTESIAN_POSITION.value, json.dumps(self.target_pos.tolist()))
-        redis_client.set(RedisKeys.DESIRED_CARTESIAN_ORIENTATION.value, json.dumps(self.target_orient.tolist()))
-        redis_client.set(RedisKeys.FORCE_MOTION_AXIS.value, json.dumps(self.motion_or_force_axis.tolist()))
-        redis_client.set(RedisKeys.FORCE_DIM.value, self.force_dim)
+        redis_client.set(RedisKeys.TARGET_POS.value, json.dumps(self.target_pos.tolist()))
+        redis_client.set(RedisKeys.TARGET_ORIENT.value, json.dumps(self.target_orient.tolist()))
+        motion_force_axis = np.concatenate([self.motion_or_force_axis.reshape(3,), [self.force_dim]])
+        
+        redis_client.set(RedisKeys.MOTION_FORCE_AXIS.value, json.dumps(motion_force_axis.tolist()))
         redis_client.set(RedisKeys.DESIRED_FORCE.value, json.dumps(self.desired_force.tolist()))
 
-
-
     #This function will make the real robot probe to see what the success distance is, such that it knows when to stop the policy
-    def find_success_thresh(self, iterations = 500):
+    def find_success_thresh(self, iterations = 700):
         #This is needed to be implemented, this is a real robot function, where the robot goes down until it feels a force that is high
 
         self.reset()
@@ -118,33 +122,46 @@ class RealRobotEnv():
         z_axis = self.tool_frame_orient[:, 2]
         target_pos = self.tool_frame_pos + 0.3 * z_axis
         self.target_pos = target_pos
+        self.target_orient = R.from_matrix(self.tool_frame_orient).as_quat()
 
         self.set_mft_redis_keys()
-        measured_force = np.array(json.loads(redis_client.get(RedisKeys.MEASURED_FORCE.value)))
+        measured_force = np.array(json.loads(redis_client.get(RedisKeys.SMOOTHED_FORCE.value)))
 
         while np.linalg.norm(measured_force) < 3:
             time.sleep(0.01)
 
         task_points_pos, _ = extract_pos_orient_keypoints(self.task_points_noise)
-        control_point_pos = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POSITION.value)))
+        control_point_pos = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POS.value)))
 
         self.success_thresh = np.linalg.norm(task_points_pos - control_point_pos)
         self.dist_scale = 1.5 * self.success_thresh
 
     #This function will tell the real robot to reset to it's desired position
-    def reset(self, iterations = 500):
+    def reset(self, iterations = 2000):
 
         # find a good universal position to set the robot too with the motion force task
-
-        self.motion_or_force_axis = np.zeros(3)
-        self.force_dim = 0
-        self.desired_force_magnitude = 0
-        self.dx_world = np.zeros(3)
-        self.sigmaMotion = np.eye(3)
-        self.sigmaForce = np.zeros((3,3))
+        self.reset_fspf_data()
+        self.reset_obs_list()
 
         self.target_pos = self.tool_frame_pos
-        self.target_orient = self.tool_frame_orient
+        self.target_orient = R.from_matrix(self.tool_frame_orient).as_quat()
+
+        self.set_mft_redis_keys()
+
+        for _ in range(iterations):
+            time.sleep(0.001)
+
+    def reset_obs_list(self):
+        obs = self.sample_observation()
+        self.obs_list = [None] * self.obs_stack
+
+        for i in range(self.obs_stack):
+            self.obs_list[i] = obs.copy()
+
+    def move_to_targets(self, target_pos,target_orient =np.array([[1,0,0],[0,-1,0],[0,0,-1]]),  iterations = 700):
+
+        self.target_pos = target_pos
+        self.target_orient = R.from_matrix(target_orient).as_quat()
 
         self.motion_or_force_axis = np.zeros(3)
         self.force_dim = 0
@@ -153,19 +170,37 @@ class RealRobotEnv():
         self.set_mft_redis_keys()
 
         for _ in range(iterations):
-            time.sleep(0.01)
+            time.sleep(0.001)
 
-    def reset_obs_list(self, data):
-        obs = self.sample_observation(data)
-        self.obs_list = [None] * self.obs_stack
+    def find_force_sensor_bias(self):
+        self.move_to_targets(target_pos =np.array([0.4, 0, 0.3]),  iterations= 2000)
 
-        for i in range(self.obs_stack):
-            self.obs_list[i] = obs.copy()
+        polling_length = 2000
+
+        force_sensor_data = np.zeros(shape = (6, 2000))
+
+        for i in range(polling_length):
+            force_world, torque_world = self.get_force_data() 
+
+            # print(f"force world : {force_world}")
+
+            force_torque = np.concatenate([force_world, torque_world]).reshape(6,)
+
+            force_sensor_data[:, i] = force_torque
+
+            time.sleep(0.001)
+
+        average_force_torque = np.mean(force_sensor_data, axis = 1) 
+
+        self.force_bias = average_force_torque[0:3]
+        self.torque_bias = average_force_torque[3:6]
+
+        print(f"average force torque is: {average_force_torque}, force_bias : {self.force_bias} torque_bias: {self.torque_bias}")
 
     def get_tool_points(self):
 
-        tool_pos = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POSITION.value)))
-        tool_orient = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_ORIENTATION.value)))
+        tool_pos = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POS.value)))
+        tool_orient = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_ORIENT.value)))
 
         tool_points = tool_orient @ self.tool_base_points + tool_pos.reshape(3,1)
 
@@ -173,24 +208,45 @@ class RealRobotEnv():
 
     def get_tool_pos_orient(self):
         
-        tool_pos = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POSITION.value)))
-        tool_orient = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_ORIENTATION.value)))
+        tool_pos = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POS.value)))
+        tool_orient = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_ORIENT.value)))
 
         return tool_pos, tool_orient
 
-    def get_task_points(self):
+    def get_noisy_task_points(self):
         return self.task_points_noise
+    
+    def get_task_points(self):
+        return self.task_base_points
 
-    def get_force_data(self):
+    def get_force_data(self, frame = None):
         #get the real force data from the robot, and we should be good
 
-        force_data = np.array(json.loads(redis_client.get(RedisKeys.MEASURED_FORCE.value)))
-        torque_data = np.array(json.loads(redis_client.get(RedisKeys.MEASURED_TORQUE.value)))
+        force_data = np.array(json.loads(redis_client.get(RedisKeys.SMOOTHED_FORCE.value)))
+        torque_data = np.array(json.loads(redis_client.get(RedisKeys.SMOOTHED_TORQUE.value)))
 
+        #get the force data in the world frame
 
-        return force_data, torque_data
+        tool_orient = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_ORIENT.value)))
 
-    def sample_observation(self, data):
+        force_world = tool_orient @ force_data
+        torque_world = tool_orient @ torque_data
+
+        force_world -= self.force_bias
+        torque_world -= self.torque_bias
+
+        if frame is not None:
+
+            return frame.T @ force_world , frame.T @ torque_world
+        
+        return force_world, torque_world
+    
+    def get_velocity_data(self):
+        velocity = np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_VEL.value)))
+
+        return velocity
+
+    def sample_observation(self):
 
         obs_list = []
 
@@ -199,7 +255,7 @@ class RealRobotEnv():
                 points = realize_points_in_frame(self.get_task_points(), self.tool_frame_pos, self.tool_frame_orient)
                 obs_list.append(points.flatten())
             elif obs_command == "tool":
-                tool_pos, tool_orient = self.get_tool_pos_orient(data)
+                tool_pos, tool_orient = self.get_tool_pos_orient()
                 tool_orient = self.tool_frame_orient.T @ tool_orient
                 tool_orient_frame_quat = R.from_matrix(tool_orient).as_quat()
                 tool_pos_frame = realize_points_in_frame(tool_pos.reshape(3,1) , self.tool_frame_pos, self.tool_frame_orient)
@@ -215,7 +271,7 @@ class RealRobotEnv():
 
         return obs
     
-    def count_observation_size(self, data):
+    def count_observation_size(self):
         
         obs_size = 0
 
@@ -247,12 +303,6 @@ class RealRobotEnv():
 
         self.obs_list.append(obs)
 
-    def get_current_distance(self):
-        # returns the distance between the task points and the tool points.
-
-        curr_dist = self.reward_module.select_reward("dist", self.get_tool_points(), self.task_points_noise, {})
-
-        return curr_dist
 
     def _get_obs(self, data):
 
@@ -270,18 +320,28 @@ class RealRobotEnv():
     
     def check_dones(self):
 
-        #Check whether the step count is past a certain amount, or the robot escapes the boundary zone it was trained on
+        done = 0
 
-        pass
+        if self.out_of_bounds:
+            return 1
+        
+        if self.step_count > self.num_phys_steps * self.actions_per_episode:
+            return 1
+
+        if self.curr_dist < self.success_thresh:
+            self.success = True
+            return 1
+
+        return 0
     
-    def apply_action(self, data, action):
+    def apply_action(self, action):
 
         dx_tool = action[:3]
         dtheta_tool = action[3:6]
         magnitude_force = action[6]
 
-        if self.nominal:
-            dx_tool[2] = 1
+        # if self.nominal:
+        #     dx_tool[2] = 1
 
         #scaling the dx world, dtheta_frame, and magnitude force created by the actor network
         if np.linalg.norm(dx_tool) > self.max_displacement_thresh:
@@ -298,7 +358,7 @@ class RealRobotEnv():
         dx_world = self.tool_frame_orient @ dx_tool
         #we want the change in orientation to be wrst the frame, so we need to f
 
-        tool_pos, orient_tool = self.get_tool_pos_orient(data)
+        tool_pos, orient_tool = self.get_tool_pos_orient()
         tool_pos_prime = tool_pos + dx_world
         orient_tool = self.tool_frame_orient.T @ orient_tool
         orient_tool = R_dtheta_tool @ orient_tool
@@ -320,30 +380,186 @@ class RealRobotEnv():
         self.desired_force_magnitude = magnitude_force
         self.dx_world = dx_world
 
-    def step(self, data):
-        qpos = data.qpos.copy()
-        qvel = data.qvel.copy()
+        dx = dx_world.reshape((3,1))
 
-        joint_torques = get_mft_torques(self.target_pos, self.target_orient, qpos, qvel, self.motion_or_force_axis, self.force_dim, self.desired_force_magnitude, self.dx_world, self.sigmaForce, self.mft_server)
+        self.desired_force = self.sigmaForce @ dx
+        if np.linalg.norm(self.desired_force) < 1e-5:
+            self.desired_force = np.zeros((3,))
+        else:
+            self.desired_force = self.desired_force_magnitude * self.desired_force/np.linalg.norm(self.desired_force)
 
-        #just publish all these keys to redis, and have the c++ files consume them, which is great!
+    def step(self, action):
+       
+        #apply action, and step 67 times at 0.001 seconds, if the steps actually pass 50, then we call an
+        self.apply_action(action)
+        self.set_mft_redis_keys()
 
-        data.ctrl[:] = joint_torques
-        mujoco.mj_step(self.model, data)
-        self.step_count += 1
+        for i in range(self.num_phys_steps):
+            time.sleep(0.001)
+            self.step_count += 1
 
-        obs, reward, dones, info = self._get_obs(data)
-
-        if dones[0] == 1:
-            print("episode has terminated!")
-            self.print_telemetry()
-            self.reset(data)
-
-        return data, (obs, reward, dones, info)
+            if self.step_count % 50 == 0:
+                self.update_fspf_data()
     
+    def reset_fspf_data(self):
+        self.motion_or_force_axis = np.zeros(3)
+        self.force_dim = 0
+        self.desired_force_magnitude = 0
+        self.dx_world = np.zeros(3)
+        self.sigmaMotion = np.eye(3)
+        self.sigmaForce = np.zeros((3,3))
+        self.desired_force = np.zeros(3)
+
+        data = np.ones(1)
+        packed_data = struct.pack('f' * data.shape[-1], *data)
+
+        self.fspf_server.send(packed_data)
+        reply = self.fspf_server.recv()
+
+    def update_fspf_data(self):#This is clean, verified from visual_tests.py
+
+        dx = self.dx_world.reshape((3,1))
+
+        motion_control = (50/1000) * self.sigmaMotion @ dx #correct
+        force_control = (50/1000) * self.sigmaForce @ dx #correct 
+
+        motion_control = motion_control.reshape(3,)
+        force_control = force_control.reshape(3,)
+
+        measured_force, _ = self.get_force_data()
+        measured_force = measured_force * -1
+        measured_vel = self.get_velocity_data()
+
+        target_data = np.hstack((motion_control, force_control, measured_vel, measured_force))
+        target_data = np.tile(target_data, (1,))
+        target_data_packed = struct.pack('f' * 12 * 1, *(target_data))
+        self.fspf_server.send(target_data_packed)
+        reply = self.fspf_server.recv()
+
+        motion_or_force_axis_and_fdim  = np.frombuffer(reply, dtype = np.float32)
+
+        motion_or_force_axis = motion_or_force_axis_and_fdim[1:4]
+        fdim = motion_or_force_axis_and_fdim[0]
+
+        motion_or_force_axis = motion_or_force_axis.reshape(3,1)
+
+        #selection matrix inference logic
+        if fdim == 0.0:
+            self.sigmaForce = np.zeros((3,3))
+            self.sigmaMotion = np.eye(3)
+        elif fdim == 1.0:
+            self.sigmaForce = motion_or_force_axis @ motion_or_force_axis.T
+            self.sigmaMotion = np.eye(3) - self.sigmaForce
+        elif fdim == 2.0:
+            self.sigmaMotion = motion_or_force_axis @ motion_or_force_axis.T
+            self.sigmaForce = np.eye(3) - self.sigmaForce
+        elif fdim == 3.0:
+            self.sigmaForce = np.eye(3)
+            self.sigmaMotion = np.zeros((3,3))
+
+        self.motion_or_force_axis = motion_or_force_axis
+        self.force_dim = fdim
+
+        return motion_or_force_axis, fdim
+
     def print_telemetry(self):
-        #Print whatever telemetry you want t
-        pass
+        print(f"self out of bounds: {self.out_of_bounds}")
+        print(f"self.step_count: {self.step_count} self.num_phys_steps: {self.num_phys_steps} greater: {self.step_count > self.num_phys_steps* self.actions_per_episode}")
+
+#have the code to deploy to the real robot 
+#what I need to do is load the model, then create a control loop that calls the model at 20 hz, or how many ever is specified 
+#by the config file
+
+SIM = True
+
+ctx = zmq.Context()
+
+fspf_socket = ctx.socket(zmq.REQ)
+fspf_socket.connect("ipc:///tmp/zmq_fspf_server")
+visual_config_file = "./sim_tests_config.yaml"
+visual_config = params_from_yaml(visual_config_file)
+run_name = visual_config["model"]["run_name"]
+params = params_from_yaml(f"{visual_config["model"]["run_dir"]}/run_{run_name}/experiment_{run_name}.yaml")
+
+tool_start_info = np.loadtxt(f"./runs/run_{run_name}/tool_start_info.txt")
+
+real_robot_env = RealRobotEnv(fspf_socket, params = params, tool_start_info=tool_start_info)
+weights_path = f"{visual_config["model"]["run_dir"]}/run_{run_name}/model{visual_config["model"]["iter"]}.cleanrl_model"
+
+state_dict = torch.load(weights_path)
+agent = TransformerAgent(real_robot_env.obs_size, real_robot_env.obs_size, real_robot_env.obs_stack, 7 * real_robot_env.action_horizon)
+agent.load_state_dict(state_dict)
+
+#Now we have loaded the agent successfully ---- cool
+
+if SIM:
+    redis_client.set(RedisKeys.SMOOTHED_FORCE.value, json.dumps(np.zeros(3).tolist()))
+    redis_client.set(RedisKeys.SMOOTHED_TORQUE.value, json.dumps(np.zeros(3).tolist()))
+    redis_client.set(RedisKeys.FORCE_SENSOR_KEY.value, json.dumps(np.ones(3).tolist()))
+    redis_client.set(RedisKeys.MOMENT_SENSOR_KEY.value, json.dumps(np.zeros(3).tolist()))
+
+print("starting the real robot deployment!!!")
+
+time.sleep(2)
+
+# print("Finding the success threshold")
+
+real_robot_env.find_force_sensor_bias()
+
+time.sleep(2)
+
+# real_robot_env.find_success_thresh()
+
+print("Resetting the robot!")
+
+real_robot_env.reset()
+
+
+print(f"actual pos: {np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POS.value)))}, target point pos: {real_robot_env.target_pos}")
+
+print("starting real world robot deployment!")
+
+for i in range(20):
+
+    ## deploy the policy on the real robot
+
+    # obs = real_robot_env.get_full_observation()
+
+    # obs = torch.tensor(obs, dtype = torch.float32)
+    # action, _, _, _ = agent.get_action_and_value(obs)
+    # action = action.cpu().numpy()
+    # action = action.reshape(7 * real_robot_env.action_horizon,)
+
+    action = np.random.uniform(low=-1.0, high=1.0, size=(7,))
+    
+
+    real_robot_env.step(action)
+
+    print(f"sigma motion: {real_robot_env.sigmaMotion}, dx world : {real_robot_env.dx_world}")
+
+#and we are done!
+
+#we are tearing off the force sensor data correctly
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
 
 
 

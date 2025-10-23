@@ -23,7 +23,7 @@ import shutil
 
 
 # -------------Init ----------------------------------------
-mj_xml_path = "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3wireconnect.xml"
+mj_xml_path = "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3peghole.xml"
 mj_model = mujoco.MjModel.from_xml_path(mj_xml_path)
 mj_data = mujoco.MjData(mj_model)
 
