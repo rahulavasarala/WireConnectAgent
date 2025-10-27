@@ -2,7 +2,7 @@ import torch
 from torch.distributions.normal import Normal
 import torch.nn as nn
 import numpy as np
-from torch_geometric.data import Batch
+# from torch_geometric.data import Batch
 import torch.nn.functional as F
     
 

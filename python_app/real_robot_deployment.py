@@ -13,6 +13,7 @@ import yaml
 from enum import Enum
 import redis
 import json
+import argparse
 
 from utils import compute_geodesic_distance, RewardsModuleV2, get_force_data, get_velocity_data, fetch_body_id, fetch_body_pos_orient
 from utils import extract_pos_orient_keypoints, generate_random_sphere_point, switch_frame_key_points, params_from_yaml
@@ -173,7 +174,7 @@ class RealRobotEnv():
             time.sleep(0.001)
 
     def find_force_sensor_bias(self):
-        self.move_to_targets(target_pos =np.array([0.4, 0, 0.3]),  iterations= 4000)
+        self.move_to_targets(target_pos =np.array([0.3, 0, 0.3]),  iterations= 4000)
         print("moved to targets!")
 
         polling_length = 2000
@@ -182,8 +183,6 @@ class RealRobotEnv():
 
         for i in range(polling_length):
             force_world, torque_world = self.get_force_data() 
-
-            print(f"force world : {force_world}")
 
             force_torque = np.concatenate([force_world, torque_world]).reshape(6,)
 
@@ -468,80 +467,125 @@ class RealRobotEnv():
         print(f"self out of bounds: {self.out_of_bounds}")
         print(f"self.step_count: {self.step_count} self.num_phys_steps: {self.num_phys_steps} greater: {self.step_count > self.num_phys_steps* self.actions_per_episode}")
 
-#have the code to deploy to the real robot 
-#what I need to do is load the model, then create a control loop that calls the model at 20 hz, or how many ever is specified 
-#by the config file
 
-SIM = True
+def deploy_model(real_robot_env: RealRobotEnv, agent: TransformerAgent, random = True):
 
-ctx = zmq.Context()
+    print("finding force sensor bias...")
+    real_robot_env.find_force_sensor_bias()
 
-fspf_socket = ctx.socket(zmq.REQ)
-fspf_socket.connect("ipc:///tmp/zmq_fspf_server")
-visual_config_file = "./sim_tests_config.yaml"
-visual_config = params_from_yaml(visual_config_file)
-run_name = visual_config["model"]["run_name"]
-params = params_from_yaml(f"{visual_config["model"]["run_dir"]}/run_{run_name}/experiment_{run_name}.yaml")
+    time.sleep(2)
 
-tool_start_info = np.loadtxt(f"./runs/run_{run_name}/tool_start_info.txt")
+    print("Resetting the robot!")
 
-real_robot_env = RealRobotEnv(fspf_socket, params = params, tool_start_info=tool_start_info)
-weights_path = f"{visual_config["model"]["run_dir"]}/run_{run_name}/model{visual_config["model"]["iter"]}.cleanrl_model"
+    real_robot_env.reset()
 
-state_dict = torch.load(weights_path)
-agent = TransformerAgent(real_robot_env.obs_size, real_robot_env.obs_size, real_robot_env.obs_stack, 7 * real_robot_env.action_horizon)
-agent.load_state_dict(state_dict)
+    for i in range(20):
 
-#Now we have loaded the agent successfully ---- cool
+        action = np.zeros(7)
 
-if SIM:
-    redis_client.set(RedisKeys.SMOOTHED_FORCE.value, json.dumps(np.zeros(3).tolist()))
-    redis_client.set(RedisKeys.SMOOTHED_TORQUE.value, json.dumps(np.zeros(3).tolist()))
-    redis_client.set(RedisKeys.FORCE_SENSOR_KEY.value, json.dumps(np.ones(3).tolist()))
-    redis_client.set(RedisKeys.MOMENT_SENSOR_KEY.value, json.dumps(np.zeros(3).tolist()))
+        if random:
+            action = np.random.uniform(low=-1.0, high=1.0, size=(7,))
+        else:
 
-print("starting the real robot deployment!!!")
+            obs = real_robot_env.get_full_observation()
 
-time.sleep(2)
+            obs = torch.tensor(obs, dtype = torch.float32)
+            action, _, _, _ = agent.get_action_and_value(obs)
+            action = action.cpu().numpy()
+            action = action.reshape(7 * real_robot_env.action_horizon,)
 
-# print("Finding the success threshold")
+        real_robot_env.step(action)
 
-real_robot_env.find_force_sensor_bias()
+#In this test, the robot will be moved to 7 random locations, and the position error will be recorded
+def calibration_test(real_robot_env: RealRobotEnv):
 
-time.sleep(2)
+    pos_err = np.zeros(7)
 
-# real_robot_env.find_success_thresh()
+    for i in range(7):
+        target_pos = np.array([0.4,0, 0.4]) + 0.1* generate_random_sphere_point()
 
-print("Resetting the robot!")
+        real_robot_env.move_to_targets(target_pos, iterations = 1000)
+        print("moved to the correct point!")
 
-# real_robot_env.reset()
+        tool_pos, _ = real_robot_env.get_tool_pos_orient()
+
+        pos_err[i] = np.linalg.norm(target_pos - tool_pos)
+
+        print(f"Pos error for pos: {pos_err[i]} is {tool_pos}")
+        time.sleep(1)
+
+    print(f"Avg err: {np.mean(pos_err)}")
+
+def fspf_test(real_robot_env: RealRobotEnv):
+
+    real_robot_env.find_force_sensor_bias()
+
+    real_robot_env.reset_fspf_data()
+
+    count = 0
+    while count < 20000:
+
+        if count%50 == 0:
+            real_robot_env.update_fspf_data()
+
+        count+= 1
+
+        time.sleep(0.001)
+
+        if count % 200 == 0:
+            print(f"motion_force_axis: {real_robot_env.motion_or_force_axis}, force_dim : {real_robot_env.force_dim}")
 
 
-# print(f"actual pos: {np.array(json.loads(redis_client.get(RedisKeys.CONTROL_POINT_POS.value)))}, target point pos: {real_robot_env.target_pos}")
 
-# print("starting real world robot deployment!")
+def main():
+    #Parse arguments for type of mode run by real robot: 
 
-# for i in range(20):
-
-#     ## deploy the policy on the real robot
-
-#     # obs = real_robot_env.get_full_observation()
-
-#     # obs = torch.tensor(obs, dtype = torch.float32)
-#     # action, _, _, _ = agent.get_action_and_value(obs)
-#     # action = action.cpu().numpy()
-#     # action = action.reshape(7 * real_robot_env.action_horizon,)
-
-#     action = np.random.uniform(low=-1.0, high=1.0, size=(7,))
+    parser = argparse.ArgumentParser(description="Example of parsing flags in Python.")
     
+    # Define a flag called --mode that takes a string argument
+    parser.add_argument(
+        '--mode',
+        type=str,
+        required=True,     # make it required (optional)
+        help='Mode to run the program(fspf,calibration,deploy)'
+    )
+    
+    args = parser.parse_args()
 
-#     real_robot_env.step(action)
+    ctx = zmq.Context()
 
-#     print(f"sigma motion: {real_robot_env.sigmaMotion}, dx world : {real_robot_env.dx_world}")
+    fspf_socket = ctx.socket(zmq.REQ)
+    fspf_socket.connect("ipc:///tmp/zmq_fspf_server")
+    visual_config_file = "./sim_tests_config.yaml"
+    visual_config = params_from_yaml(visual_config_file)
+    run_name = visual_config["model"]["run_name"]
+    params = params_from_yaml(f"{visual_config["model"]["run_dir"]}/run_{run_name}/experiment_{run_name}.yaml")
 
-#and we are done!
+    tool_start_info = np.loadtxt(f"./runs/run_{run_name}/tool_start_info.txt")
 
-#we are tearing off the force sensor data correctly
+    real_robot_env = RealRobotEnv(fspf_socket, params = params, tool_start_info=tool_start_info)
+    weights_path = f"{visual_config["model"]["run_dir"]}/run_{run_name}/model{visual_config["model"]["iter"]}.cleanrl_model"
+
+    state_dict = torch.load(weights_path)
+    agent = TransformerAgent(real_robot_env.obs_size, real_robot_env.obs_size, real_robot_env.obs_stack, 7 * real_robot_env.action_horizon)
+    agent.load_state_dict(state_dict)
+
+    if args.mode == "deploy":
+        deploy_model(real_robot_env,agent, random = False)
+    elif args.mode == "random":
+        deploy_model(real_robot_env,agent, random = True)
+    elif args.mode == "calibration":
+        calibration_test(real_robot_env)
+    elif args.mode == "fspf":
+        fspf_test(real_robot_env)
+    else:
+        print("Enter a valid option for mode!")
+
+
+
+
+if __name__ == "__main__":
+    main()
 
 
 

@@ -51,13 +51,13 @@ INCLUDE_DIRECTORIES(${CHAI3D_INCLUDE_DIRS})
 find_library(HIREDIS_LIBRARY hiredis REQUIRED)
 
 # - redis plus plus
-find_library(REDIS_PLUS_PLUS_LIBRARY redis++ REQUIRED)
+# find_library(REDIS_PLUS_PLUS_LIBRARY redis++ REQUIRED)
 
 # - json
-find_package(nlohmann_json 3.11.3 REQUIRED)
+# find_package(nlohmann_json 3.11.3 REQUIRED)
 
 # - mujoco
-find_package(mujoco REQUIRED)
+# find_package(mujoco REQUIRED)
 
 # - zmq
 find_library(ZeroMQ_LIBRARY
@@ -88,8 +88,8 @@ add_definitions(-DURDF_PATH=\"${PROJECT_SOURCE_DIR}/models\")
 list(APPEND MUJOCO_SAI_COMMON_LIBRARIES
 		${CHAI3D_LIBRARIES}
 		${HIREDIS_LIBRARY}
-		${REDIS_PLUS_PLUS_LIBRARY}
-		mujoco::mujoco
+		# ${REDIS_PLUS_PLUS_LIBRARY}
+		# mujoco::mujoco
 		${ZeroMQ_LIBRARY}
     yaml-cpp::yaml-cpp
 		wire-connect-agent 
