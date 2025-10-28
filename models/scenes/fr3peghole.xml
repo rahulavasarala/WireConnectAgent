@@ -201,7 +201,7 @@
 
     <body name="task" pos="0.4 0 0.0" quat="1 0 0 0">
       <geom mesh="holesim" class="visual"/>
-      <geom mesh="geom0"  class="collision" friction="0.1 0.1 0.1"/>
+      <!-- <geom mesh="geom0"  class="collision" friction="0.1 0.1 0.1"/>
       <geom mesh="geom1" rgba="0.9716724395095205 0.4155773668635704 0.4891406227984333 1" class="collision" friction="0.1 0.1 0.1"/>
       <geom mesh="geom2" rgba="0.14830229256383265 0.6475927777174105 0.7338673709396254 1" class="collision" friction="0.1 0.1 0.1"/>
       <geom mesh="geom3" rgba="0.9669567561504457 0.1597578128209678 0.014474842421785983 1" class="collision" friction="0.1 0.1 0.1"/>
@@ -232,7 +232,7 @@
       <geom mesh="geom28" rgba="0.9716724395095205 0.4155773668635704 0.4891406227984333 1" class="collision" friction="0.1 0.1 0.1"/>
       <geom mesh="geom29" rgba="0.14830229256383265 0.6475927777174105 0.7338673709396254 1" class="collision" friction="0.1 0.1 0.1"/>
       <geom mesh="geom30" rgba="0.9669567561504457 0.1597578128209678 0.014474842421785983 1" class="collision" friction="0.1 0.1 0.1"/>
-      <geom mesh="geom31" rgba="0.6799236025959631 0.3699565607110832 0.5072143585472161 1" class="collision" friction="0.1 0.1 0.1"/>
+      <geom mesh="geom31" rgba="0.6799236025959631 0.3699565607110832 0.5072143585472161 1" class="collision" friction="0.1 0.1 0.1"/> -->
     </body>
 
     <geom name="task_keypoint_1" type="sphere" size="0.001" rgba="1 0 0 1" pos="0.4 0 0" mass="0"/>
