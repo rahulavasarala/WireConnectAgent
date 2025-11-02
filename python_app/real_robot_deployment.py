@@ -253,7 +253,7 @@ class RealRobotEnv():
 
         for obs_command in self.obs_key:
             if obs_command == "task_points":
-                points = realize_points_in_frame(self.get_task_points(), self.tool_frame_pos, self.tool_frame_orient)
+                points = realize_points_in_frame(self.get_noisy_task_points(), self.tool_frame_pos, self.tool_frame_orient)
                 obs_list.append(points.flatten())
             elif obs_command == "tool":
                 tool_pos, tool_orient = self.get_tool_pos_orient()
@@ -341,8 +341,8 @@ class RealRobotEnv():
         dtheta_tool = action[3:6]
         magnitude_force = action[6]
 
-        # if self.nominal:
-        #     dx_tool[2] = 1
+        if self.nominal:
+            dx_tool[2] = 1
 
         #scaling the dx world, dtheta_frame, and magnitude force created by the actor network
         if np.linalg.norm(dx_tool) > self.max_displacement_thresh:
@@ -399,8 +399,8 @@ class RealRobotEnv():
             time.sleep(0.001)
             self.step_count += 1
 
-            if self.step_count % 50 == 0:
-                self.update_fspf_data()
+            # if self.step_count % 50 == 0:
+            #     self.update_fspf_data()
     
     def reset_fspf_data(self):
         self.motion_or_force_axis = np.zeros(3)
@@ -468,10 +468,10 @@ class RealRobotEnv():
         print(f"self.step_count: {self.step_count} self.num_phys_steps: {self.num_phys_steps} greater: {self.step_count > self.num_phys_steps* self.actions_per_episode}")
 
 
-def deploy_model(real_robot_env: RealRobotEnv, agent: TransformerAgent, random = True):
+def deploy_model(real_robot_env: RealRobotEnv, agent: TransformerAgent, action_list = None, random = True):
 
     print("finding force sensor bias...")
-    real_robot_env.find_force_sensor_bias()
+    # real_robot_env.find_force_sensor_bias()
 
     time.sleep(2)
 
@@ -479,20 +479,30 @@ def deploy_model(real_robot_env: RealRobotEnv, agent: TransformerAgent, random =
 
     real_robot_env.reset()
 
-    for i in range(20):
+    obs = real_robot_env.sample_observation()
+
+    print(f"first observation is: {obs}")
+
+    for i in range(10):
 
         action = np.zeros(7)
 
         if random:
             action = np.random.uniform(low=-1.0, high=1.0, size=(7,))
+        elif action_list is not None:
+            real_robot_env.step(action_list[i])
         else:
 
             obs = real_robot_env.get_full_observation()
+            
 
             obs = torch.tensor(obs, dtype = torch.float32)
             action, _, _, _ = agent.get_action_and_value(obs)
             action = action.cpu().numpy()
             action = action.reshape(7 * real_robot_env.action_horizon,)
+
+            if i == 0:
+                print(f"full obs: {obs}, action : {action}")
 
         real_robot_env.step(action)
 
@@ -570,8 +580,13 @@ def main():
     agent = TransformerAgent(real_robot_env.obs_size, real_robot_env.obs_size, real_robot_env.obs_stack, 7 * real_robot_env.action_horizon)
     agent.load_state_dict(state_dict)
 
+    # action_list = np.zeros((10 , 7))
+
+    # action_list[:, 0] = 0
+    # action_list[:,2] = 1
+
     if args.mode == "deploy":
-        deploy_model(real_robot_env,agent, random = False)
+        deploy_model(real_robot_env,agent, action_list = None, random = False)
     elif args.mode == "random":
         deploy_model(real_robot_env,agent, random = True)
     elif args.mode == "calibration":

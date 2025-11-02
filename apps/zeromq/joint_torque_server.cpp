@@ -14,7 +14,7 @@ const std::string zeromq_server = "ipc:///tmp/zmq_torque_server";
 const int ROBOT_GRIPPER_JOINTS = 7;
 const int num_envs = 1;
 int num_workers = 1;
-const string robot_file = std::string(URDF_PATH) + "/scenes/fr3.urdf";
+const string robot_file = std::string(URDF_PATH) + "/scenes/panda_arm.urdf";
 
 // Preallocate thread-local robot instances
 std::vector<std::shared_ptr<SaiModel::SaiModel>> robot_pool(num_envs);
@@ -66,10 +66,10 @@ int main() {
     // Initialize per-env robots and tasks
     for (int i = 0; i < num_envs; ++i) {
         robot_pool[i] = std::make_shared<SaiModel::SaiModel>(robot_file, false);
-        Vector3d control_point = Vector3d(0, 0, 0.3625);
+        Vector3d control_point = Vector3d(0, 0, 0.2015);
         Affine3d control_frame = Affine3d::Identity();
         control_frame.translation() = control_point;
-        mft_pool[i] = std::make_shared<SaiPrimitives::MotionForceTask>(robot_pool[i], "fr3_link7", control_frame);
+        mft_pool[i] = std::make_shared<SaiPrimitives::MotionForceTask>(robot_pool[i], "link7", control_frame);
         jt_pool[i] = std::make_shared<SaiPrimitives::JointTask>(robot_pool[i]);
         mft_pool[i]->setPosControlGains(400, 40, 0);
 	    mft_pool[i]->setOriControlGains(400, 40, 0);

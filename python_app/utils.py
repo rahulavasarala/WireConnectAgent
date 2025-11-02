@@ -226,6 +226,13 @@ def get_joint_torques(data, des_pos , des_orient, jt_socket):
 
 def get_mft_torques(des_pos, des_orient, qpos, qvel, motion_force_axis, force_dim, force_magnitude, dx_world, sigma_force, mft_socket):
 
+    # print(f"des pos: {des_pos}")
+    # print(f"des orient: {des_orient}")
+    # print(f"motion force axis: {motion_force_axis}")
+    # print(f"force dim: {force_dim}")
+    # print(f"dx_world: {dx_world}")
+
+
     dx = dx_world.reshape((3,1))
 
     desired_force = sigma_force @ dx
@@ -233,6 +240,8 @@ def get_mft_torques(des_pos, des_orient, qpos, qvel, motion_force_axis, force_di
         desired_force = np.zeros((3,))
     else:
         desired_force = force_magnitude * desired_force/np.linalg.norm(desired_force)
+
+    # print(f"desired force: {desired_force}")
     
     stacked_data = np.concatenate([des_pos, des_orient, qpos, qvel, motion_force_axis.flatten(), np.array([force_dim]), desired_force])
 
@@ -286,7 +295,7 @@ class TaskModule():
     def __init__(self):
 
         self.task_points_ph = np.array([[0.005, 0.005, 0], [-0.005, 0.005, 0], [-0.005, -0.005, 0], [0.005, -0.005, 0]]).T
-        self.tool_points_ph = np.array([[0.005, -0.005, 0.1325], [-0.005, -0.005, 0.1325], [-0.005, 0.005, 0.1325], [0.005, 0.005, 0.1325]]).T
+        self.tool_points_ph = np.array([[0.005, -0.005, 0.025], [-0.005, -0.005, 0.025], [-0.005, 0.005, 0.025], [0.005, 0.005, 0.025]]).T
 
         self.task_points_wc = np.array([
             [-0.007,  0.0007, 0.0],

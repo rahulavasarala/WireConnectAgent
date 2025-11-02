@@ -41,7 +41,10 @@ class ContactRichEnv:
             self.save_tool_start_info()
 
         self.initialize_quick_reset_positions(data)
+
+        
         self.find_success_thresh(data)
+
         self.show_zones(data)
         self.count_observation_size(data)
 
@@ -90,13 +93,23 @@ class ContactRichEnv:
 
         self.run_name = params["name"]
         self.min_dist = 1
+        self.probe = params["probe"]
 
         task_module = TaskModule()
         self.task_base_points, self.tool_base_points = task_module.get_task_tool_points(params["task"])
 
     def find_success_thresh(self, data, iterations = 500):
+
         self.reset(data)
         self.success_thresh = 0
+
+        if not self.probe:
+            dist = self.reward_module.select_reward("dist", self.get_tool_points(data), self.get_noisy_task_points(data), {})
+            self.success_thresh = 0.75 * dist
+            self.dist_scale = 1.5 * dist
+
+            return 
+
 
         #Move in the nominal direction until the force spikes
         z_axis = self.tool_frame_orient[:, 2]
@@ -153,6 +166,8 @@ class ContactRichEnv:
         t_p, t_o = fetch_body_pos_orient(data, task_id)
 
         task_points = t_o @ self.task_base_points + t_p.reshape(3,1)
+
+        # print(f"Task points after the transformation: {task_points}")
 
         task_pos, _ = extract_pos_orient_keypoints(task_points)
 
@@ -262,6 +277,8 @@ class ContactRichEnv:
     def sample_observation(self, data):
 
         obs_list = []
+
+        # print(f"obs keys: {self.obs_key}")
 
         for obs_command in self.obs_key:
             if obs_command == "task_points":
@@ -446,6 +463,7 @@ class ContactRichEnv:
     def apply_action(self, data, action):
 
         dx_tool = action[:3]
+        # print(f"dx tool: {dx_tool}")
         dtheta_tool = action[3:6]
         magnitude_force = action[6]
 
@@ -469,10 +487,13 @@ class ContactRichEnv:
         #we want the change in orientation to be wrst the frame, so we need to f
 
         tool_pos, orient_tool = self.get_tool_pos_orient(data)
+        # print(f"Orient tool = {orient_tool}")
         tool_pos_prime = tool_pos + dx_world
         orient_tool = self.tool_frame_orient.T @ orient_tool
         orient_tool = R_dtheta_tool @ orient_tool
         orient_tool_prime = self.tool_frame_orient @ orient_tool
+
+        # print(f"Orient tool prime = {orient_tool_prime}")
 
         tool_pos_in_frame = self.tool_frame_orient.T @ (tool_pos - self.tool_frame_pos)
         theta_dist = compute_geodesic_distance(self.tool_frame_orient, orient_tool_prime)
@@ -490,7 +511,10 @@ class ContactRichEnv:
         self.desired_force_magnitude = magnitude_force
         self.dx_world = dx_world
 
+        # print(f"Target orient quat : {self.target_orient}")
+
     def step(self, data, horizon_action = None):
+
 
         horizon_iterations = 1 if self.mode == "eval" else self.exec_actions
 
@@ -503,8 +527,8 @@ class ContactRichEnv:
             iterations = 1 if self.mode == "eval" else self.num_phys_steps
 
             for _ in range(iterations):
-                if self.step_count % 50 == 0:
-                    self.update_fspf_data(data)
+                # if self.step_count % 50 == 0:
+                #     self.update_fspf_data(data)
 
                 qpos = data.qpos.copy()
                 qvel = data.qvel.copy()

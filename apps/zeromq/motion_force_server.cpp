@@ -14,7 +14,7 @@ const std::string zeromq_server = "ipc:///tmp/zmq_motion_force_server";
 const int ROBOT_GRIPPER_JOINTS = 7;
 const int num_envs = 1;
 int num_workers = 1;
-const string robot_file = std::string(URDF_PATH) + "/scenes/fr3.urdf";
+const string robot_file = std::string(URDF_PATH) + "/scenes/panda_arm.urdf";
 
 // Preallocate thread-local robot instances
 std::vector<std::shared_ptr<SaiModel::SaiModel>> robot_pool(num_envs);
@@ -43,7 +43,23 @@ void compute_robot_joint_torques(std::shared_ptr<SaiModel::SaiModel> robot,
     Vector3d f_or_m_axis = Vector3d(force_or_motion_axis[0], force_or_motion_axis[1], force_or_motion_axis[2]);
     motion_force_task->parametrizeForceMotionSpaces(static_cast<int>(*force_dim),f_or_m_axis);
 
-    motion_force_task->setGoalPosition(Vector3d(des_cart_pos[0], des_cart_pos[1], des_cart_pos[2]));
+    Vector3d desired_pos = Vector3d(des_cart_pos[0], des_cart_pos[1], des_cart_pos[2]);
+
+    std::cout << "desired_pos: " << desired_pos << std::endl;
+
+    std::cout << "desired_force: " << d_force << std::endl;
+
+    std::cout << "force or motion axis: " << f_or_m_axis << std::endl;
+    
+    std::cout << "force dim: " << static_cast<int>(*force_dim) << std::endl;
+
+    VectorXd sent_quat(4);
+
+    sent_quat << des_cart_orient[0], des_cart_orient[1], des_cart_orient[2], des_cart_orient[3];
+
+    std::cout << "quat: " << sent_quat << std::endl;
+
+    motion_force_task->setGoalPosition(desired_pos);
     Eigen::Quaterniond qd(static_cast<double>(des_cart_orient[3]),
                       static_cast<double>(des_cart_orient[0]),
                       static_cast<double>(des_cart_orient[1]),
@@ -63,10 +79,10 @@ int main() {
     // Initialize per-env robots and tasks
     for (int i = 0; i < num_envs; ++i) {
         robot_pool[i] = std::make_shared<SaiModel::SaiModel>(robot_file, false);
-        Vector3d control_point = Vector3d(0, 0, 0.3625);
+        Vector3d control_point = Vector3d(0, 0, 0.2015);
         Affine3d control_frame = Affine3d::Identity();
         control_frame.translation() = control_point;
-        mft_pool[i] = std::make_shared<SaiPrimitives::MotionForceTask>(robot_pool[i], "fr3_link7", control_frame);
+        mft_pool[i] = std::make_shared<SaiPrimitives::MotionForceTask>(robot_pool[i], "link7", control_frame);
         jt_pool[i] = std::make_shared<SaiPrimitives::JointTask>(robot_pool[i]);
         mft_pool[i]->disableInternalOtg();
     }

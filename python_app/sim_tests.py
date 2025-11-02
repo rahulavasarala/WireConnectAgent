@@ -110,12 +110,22 @@ class Simulation():
         self.target_orient = None
         self.replay = visual_config["replay"]
 
+        self.action_log = []
+
     def reset(self, data):
         self.env.reset(data)
+        
         self.action = None
         self.action_index = self.env.exec_actions
         self.switch_to_nominal = False
         self.nominal_step_count = 0
+        self.action_log = []
+
+        #Print the starting observation
+
+        obs = self.env.sample_observation(data)
+        print(f"Starting observation is : {obs}")
+        print(f"Len obs: {obs.shape}")
 
     def generate_action(self, obs):
         action = None
@@ -127,6 +137,10 @@ class Simulation():
             action, _, _, _ = self.model.get_action_and_value(obs)
             action = action.cpu().numpy()
             action = action.reshape(7 * self.env.action_horizon,)
+        elif self.action_type == "single_step":
+            action = np.zeros(7)
+            action[0] = 0
+            action[2] = -1
             
         return action
 
@@ -134,6 +148,8 @@ class Simulation():
         state_dict = torch.load(weights_path)
         self.model = TransformerAgent(self.env.obs_size, self.env.obs_size, self.env.obs_stack, 7 * self.env.action_horizon)
         self.model.load_state_dict(state_dict)
+
+        self.model.eval()
 
     def step(self, data):
 
@@ -156,6 +172,7 @@ class Simulation():
             if self.action_index == self.env.exec_actions:
                 obs = self.env.get_full_observation()
                 self.action = self.generate_action(obs)
+                self.action_log.append(self.action[:7])
                 self.action_index = 0
                 self.env.apply_action(data, self.action[0:7])
             elif self.env.step_count % self.env.num_phys_steps == 0:
@@ -170,6 +187,9 @@ class Simulation():
                 print("Switching to nominal!")
                 self.switch_to_nominal = True
             elif tup[2][0] == 1:
+                print("Reseting the environment!")
+                self.action_log = np.concatenate(self.action_log).reshape(-1, 7)
+                print(f"Self.action log : {self.action_log}")
                 self.reset(data)
                 return data
 
@@ -197,6 +217,69 @@ class Simulation():
         self.nominal_step_count += 1
 
         return data
+    
+class MoveToTargets():
+    def __init__(self, visual_config_file):
+        visual_config = params_from_yaml(visual_config_file)
+        self.action_type = visual_config["action_type"]
+        run_name = visual_config["model"]["run_name"]
+
+        params = params_from_yaml(f"{visual_config["model"]["run_dir"]}/run_{run_name}/experiment_{run_name}.yaml")
+        tool_start_info = np.loadtxt(f"./runs/run_{run_name}/tool_start_info.txt")
+
+        tool_start_info[:3] = np.array([0.3,0.3,0.3])
+        tool_start_info[3:7] = np.array([1,0,0,0])
+
+        self.env = ContactRichEnv([jt_socket, mft_socket, fspf_socket], model=mj_model, data= mj_data, params = params, tool_start_info=tool_start_info)
+        self.env.eval()
+        self.debug = True
+        self.step_count = 0
+
+    def reset(self, data):
+        self.env.reset(data)
+        self.action_index = self.env.exec_actions
+        self.action_hz = 2000
+        self.action_count = 0
+
+    def generate_action(self):
+
+        action = np.zeros(7)
+        action[0] = 0
+        action[2] = -1
+            
+        return action
+
+    def step(self, data):
+
+        data = self.naive_upwards_step(data)
+
+        if self.debug:
+            self.env.show_key_points(data)
+            
+
+        return data, 1
+    
+    def naive_upwards_step(self, data):
+
+        for _ in range(17): 
+            if self.action_count == 0:
+                curr_pos, _ = self.env.get_tool_pos_orient(data)
+                self.env.target_pos = curr_pos + np.array([0.01,0,0.001])
+
+                print(f"target pos: {self.env.target_pos}")
+                self.action_count += 1
+
+                
+            else:
+                self.env.move_to_targets(data, self.env.target_pos, np.array([[1,0,0],[0,-1,0], [0,0,-1]]), iterations =1)
+                self.action_count += 1
+
+                if self.action_count == self.action_hz:
+                    self.action_count = 0
+
+
+        return data
+
 
 def main():
     global mj_data

@@ -1,10 +1,10 @@
-xml_path: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3peghole.xml"
+xml_path: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3peghole_v2.xml"
 action_type: "model"
 
 model: #This is if we need it
   run_dir: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/python_app/runs"
-  run_name: "peginhole_4"
-  iter: 200
+  run_name: "peginhole_noforce2"
+  iter: 100
 
 debug: True
 replay: True
