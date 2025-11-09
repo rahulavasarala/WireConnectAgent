@@ -506,6 +506,30 @@ def deploy_model(real_robot_env: RealRobotEnv, agent: TransformerAgent, action_l
 
         real_robot_env.step(action)
 
+def force_calibration_positions(real_robot_env: RealRobotEnv):
+
+    orient_list = np.array([[-0.707, 0, 0, -0.707], 
+                                   [0.5, -0.5, 0.5, 0.5], 
+                                   [0 ,-0.707, 0.707, 0], 
+                                   [-0.5 ,-0.5, 0.5, -0.5], 
+                                   [1,0,0,0]])
+    
+    target_pos = np.array([0.4, 0,0.4])
+
+    for i in range(5):
+
+        target_orient = R.from_quat(orient_list[i]).as_matrix()
+
+        real_robot_env.move_to_targets(target_pos, target_orient, iterations = 4000)
+
+        time.sleep(1)
+        real_robot_env.move_to_targets(target_pos, iterations = 4000)
+        time.sleep(1)
+
+        print(f"qpos of robot is: {np.array(json.loads(redis_client.get(RedisKeys.JOINT_ANGLES_KEY.value)))}")
+
+        
+
 #In this test, the robot will be moved to 7 random locations, and the position error will be recorded
 def calibration_test(real_robot_env: RealRobotEnv):
 
@@ -593,6 +617,8 @@ def main():
         calibration_test(real_robot_env)
     elif args.mode == "fspf":
         fspf_test(real_robot_env)
+    elif args.mode == "force_cal":
+        force_calibration_positions(real_robot_env)
     else:
         print("Enter a valid option for mode!")
 

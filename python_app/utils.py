@@ -77,7 +77,10 @@ def generate_random_sphere_point():
     unit_vector = random_vector / norm_val
     return unit_vector
 
-def get_force_data(model, data, frame_orient = None):
+def get_force_data(model, data, frame_orient = None, force_dim = 1):
+
+    if force_dim == 0:
+        return np.zeros(3), np.zeros(3)
     # Get sensor id
     force_sensor_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SENSOR, "force_sensor")
     torque_sensor_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SENSOR, "torque_sensor")
@@ -241,7 +244,7 @@ def get_mft_torques(des_pos, des_orient, qpos, qvel, motion_force_axis, force_di
     else:
         desired_force = force_magnitude * desired_force/np.linalg.norm(desired_force)
 
-    # print(f"desired force: {desired_force}")
+    desired_force = desired_force.reshape(3,)
     
     stacked_data = np.concatenate([des_pos, des_orient, qpos, qvel, motion_force_axis.flatten(), np.array([force_dim]), desired_force])
 

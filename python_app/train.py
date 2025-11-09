@@ -289,7 +289,7 @@ if __name__ == "__main__":
 
         print("SPS:", int(global_step / (time.time() - start_time)))
 
-        if args.save_model and (iteration % 100 == 0 or iteration == args.num_iterations - 1):
+        if args.save_model and (iteration % 10 == 0 or iteration == args.num_iterations - 1):
             model_path = f"{experiment_run_dir}/model{iteration}.cleanrl_model"
             torch.save(agent.state_dict(), model_path)
             print(f"model saved to {model_path}")

@@ -227,7 +227,7 @@ class MoveToTargets():
         params = params_from_yaml(f"{visual_config["model"]["run_dir"]}/run_{run_name}/experiment_{run_name}.yaml")
         tool_start_info = np.loadtxt(f"./runs/run_{run_name}/tool_start_info.txt")
 
-        tool_start_info[:3] = np.array([0.3,0.3,0.3])
+        tool_start_info[:3] = np.array([0.3,0.3,0.05])
         tool_start_info[3:7] = np.array([1,0,0,0])
 
         self.env = ContactRichEnv([jt_socket, mft_socket, fspf_socket], model=mj_model, data= mj_data, params = params, tool_start_info=tool_start_info)
@@ -238,14 +238,12 @@ class MoveToTargets():
     def reset(self, data):
         self.env.reset(data)
         self.action_index = self.env.exec_actions
-        self.action_hz = 2000
+        self.action_hz = 200
         self.action_count = 0
 
     def generate_action(self):
 
         action = np.zeros(7)
-        action[0] = 0
-        action[2] = -1
             
         return action
 
@@ -264,7 +262,7 @@ class MoveToTargets():
         for _ in range(17): 
             if self.action_count == 0:
                 curr_pos, _ = self.env.get_tool_pos_orient(data)
-                self.env.target_pos = curr_pos + np.array([0.01,0,0.001])
+                self.env.target_pos = curr_pos + np.array([0.001,0,-0.005])
 
                 print(f"target pos: {self.env.target_pos}")
                 self.action_count += 1
@@ -276,6 +274,10 @@ class MoveToTargets():
 
                 if self.action_count == self.action_hz:
                     self.action_count = 0
+
+            if self.action_count % 50 == 0:
+                self.env.dx_world = np.array([0,0,-0.005])
+                self.env.update_fspf_data(data)
 
 
         return data

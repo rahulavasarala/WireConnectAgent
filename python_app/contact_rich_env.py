@@ -118,7 +118,7 @@ class ContactRichEnv:
         for _ in range(iterations):
             self.move_to_targets(data, target_pos, self.tool_frame_orient, iterations = 1)
 
-            force, _ = get_force_data(self.model, data)
+            force, _ = get_force_data(self.model, data, force_dim = -1)
 
             tool_pos, _ = extract_pos_orient_keypoints(self.get_tool_points(data))
             print(f"tool position is : {tool_pos}, {force}")
@@ -292,7 +292,7 @@ class ContactRichEnv:
                 obs_list.append(tool_pos_frame.flatten())
                 obs_list.append(tool_orient_frame_quat.flatten())
             elif obs_command == "force":
-                force_frame, torque_frame = get_force_data(self.model, data,  self.tool_frame_orient)
+                force_frame, torque_frame = get_force_data(self.model, data,  self.tool_frame_orient, self.force_dim)
                 obs_list.append(force_frame.flatten())
                 obs_list.append(torque_frame.flatten())
 
@@ -418,15 +418,18 @@ class ContactRichEnv:
 
         dx = self.dx_world.reshape((3,1))
 
-        motion_control = (50/1000) * self.sigmaMotion @ dx #correct
-        force_control = (50/1000) * self.sigmaForce @ dx #correct 
+        motion_control = (2/10) * self.sigmaMotion @ dx #correct
+        force_control = (2/10) * self.sigmaForce @ dx #correct 
 
         motion_control = motion_control.reshape(3,)
         force_control = force_control.reshape(3,)
 
-        measured_force, _ = get_force_data(self.model, data)
-        measured_force = measured_force * -1
+        measured_force, _ = get_force_data(self.model, data, force_dim=-1)
+        
+        measured_force = measured_force 
         measured_vel = get_velocity_data(self.model, data)
+
+        # print(f"measured force: {measured_force}, measured_velocity: {measured_vel}, motion_control: {motion_control}, dx_world: {self.dx_world}, force_control: {force_control}")
 
         target_data = np.hstack((motion_control, force_control, measured_vel, measured_force))
         target_data = np.tile(target_data, (1,))
@@ -457,6 +460,8 @@ class ContactRichEnv:
 
         self.motion_or_force_axis = motion_or_force_axis
         self.force_dim = fdim
+
+        # print(f"motion or force axis: {self.motion_or_force_axis}, self.force_dim: {self.force_dim}")
 
         return motion_or_force_axis, fdim
     
@@ -527,8 +532,8 @@ class ContactRichEnv:
             iterations = 1 if self.mode == "eval" else self.num_phys_steps
 
             for _ in range(iterations):
-                # if self.step_count % 50 == 0:
-                #     self.update_fspf_data(data)
+                if self.step_count % 50 == 0:
+                    self.update_fspf_data(data)
 
                 qpos = data.qpos.copy()
                 qvel = data.qvel.copy()
