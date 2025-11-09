@@ -174,8 +174,6 @@ class RealRobotEnv():
             time.sleep(0.001)
 
     def find_force_sensor_bias(self):
-        self.move_to_targets(target_pos =np.array([0.3, 0, 0.3]),  iterations= 4000)
-        print("moved to targets!")
 
         polling_length = 2000
 
@@ -219,8 +217,11 @@ class RealRobotEnv():
     def get_task_points(self):
         return self.task_base_points
 
-    def get_force_data(self, frame = None):
+    def get_force_data(self, frame = None, clip = False):
         #get the real force data from the robot, and we should be good
+
+        if clip == True and self.force_dim == 0:
+            return np.zeros(3), np.zeros(3)
 
         force_data = np.array(json.loads(redis_client.get(RedisKeys.SMOOTHED_FORCE.value)))
         torque_data = np.array(json.loads(redis_client.get(RedisKeys.SMOOTHED_TORQUE.value)))
@@ -263,7 +264,7 @@ class RealRobotEnv():
                 obs_list.append(tool_pos_frame.flatten())
                 obs_list.append(tool_orient_frame_quat.flatten())
             elif obs_command == "force":
-                force_frame, torque_frame = self.get_force_data(self.tool_frame_orient)
+                force_frame, torque_frame = self.get_force_data(frame = self.tool_frame_orient, clip = True)
                 obs_list.append(force_frame.flatten())
                 obs_list.append(torque_frame.flatten())
 
@@ -305,19 +306,14 @@ class RealRobotEnv():
         self.obs_list.append(obs)
 
 
-    def _get_obs(self, data):
+    def _get_obs(self):
 
-        dones = np.array([self.check_dones(data)])
-
-        new_obs = self.sample_observation(data)
+        new_obs = self.sample_observation()
         self.call_add_observation_to_stack(new_obs)
 
         obs = self.get_full_observation()
 
-        obs = np.array([obs])
-        obs = obs.reshape(1,-1)
-
-        return obs, dones
+        return obs
     
     def check_dones(self):
 
@@ -399,8 +395,10 @@ class RealRobotEnv():
             time.sleep(0.001)
             self.step_count += 1
 
-            # if self.step_count % 50 == 0:
-            #     self.update_fspf_data()
+            if self.step_count % 50 == 0:
+                self.update_fspf_data()
+
+        self._get_obs()
     
     def reset_fspf_data(self):
         self.motion_or_force_axis = np.zeros(3)
@@ -421,14 +419,14 @@ class RealRobotEnv():
 
         dx = self.dx_world.reshape((3,1))
 
-        motion_control = (50/1000) * self.sigmaMotion @ dx #correct
-        force_control = (50/1000) * self.sigmaForce @ dx #correct 
+        motion_control = (2/10) * self.sigmaMotion @ dx #correct
+        force_control = (2/10) * self.sigmaForce @ dx #correct 
 
         motion_control = motion_control.reshape(3,)
         force_control = force_control.reshape(3,)
 
         measured_force, _ = self.get_force_data()
-        measured_force = measured_force * -1
+        measured_force = measured_force
         measured_vel = self.get_velocity_data()
 
         target_data = np.hstack((motion_control, force_control, measured_vel, measured_force))
@@ -470,20 +468,24 @@ class RealRobotEnv():
 
 def deploy_model(real_robot_env: RealRobotEnv, agent: TransformerAgent, action_list = None, random = True):
 
-    print("finding force sensor bias...")
-    # real_robot_env.find_force_sensor_bias()
-
-    time.sleep(2)
+    
 
     print("Resetting the robot!")
 
     real_robot_env.reset()
 
+    time.sleep(2)
+
+    print("finding force sensor bias...")
+    real_robot_env.find_force_sensor_bias()
+
+    
+
     obs = real_robot_env.sample_observation()
 
     print(f"first observation is: {obs}")
 
-    for i in range(10):
+    for i in range(20):
 
         action = np.zeros(7)
 
@@ -493,9 +495,8 @@ def deploy_model(real_robot_env: RealRobotEnv, agent: TransformerAgent, action_l
             real_robot_env.step(action_list[i])
         else:
 
-            obs = real_robot_env.get_full_observation()
+            obs = real_robot_env._get_obs()
             
-
             obs = torch.tensor(obs, dtype = torch.float32)
             action, _, _, _ = agent.get_action_and_value(obs)
             action = action.cpu().numpy()
@@ -550,24 +551,17 @@ def calibration_test(real_robot_env: RealRobotEnv):
 
     print(f"Avg err: {np.mean(pos_err)}")
 
-def fspf_test(real_robot_env: RealRobotEnv):
+def force_calibration(real_robot_env: RealRobotEnv):
+
+    time.sleep(2)
+
+    print("Resetting the robot!")
+
+    real_robot_env.reset()
+
+    print("Finding the force sensor bias...")
 
     real_robot_env.find_force_sensor_bias()
-
-    real_robot_env.reset_fspf_data()
-
-    count = 0
-    while count < 20000:
-
-        if count%50 == 0:
-            real_robot_env.update_fspf_data()
-
-        count+= 1
-
-        time.sleep(0.001)
-
-        if count % 200 == 0:
-            print(f"motion_force_axis: {real_robot_env.motion_or_force_axis}, force_dim : {real_robot_env.force_dim}")
 
 
 
@@ -615,8 +609,8 @@ def main():
         deploy_model(real_robot_env,agent, random = True)
     elif args.mode == "calibration":
         calibration_test(real_robot_env)
-    elif args.mode == "fspf":
-        fspf_test(real_robot_env)
+    elif args.mode == "fc":
+        force_calibration(real_robot_env)
     elif args.mode == "force_cal":
         force_calibration_positions(real_robot_env)
     else:
