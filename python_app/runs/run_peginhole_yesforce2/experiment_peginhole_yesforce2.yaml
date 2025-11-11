@@ -1,0 +1,38 @@
+name: "peginhole_yesforce2"
+task: "ph"
+alpha: 4.5
+beta: 1
+dist_weight: 1
+orient_weight: 1
+hz: 15
+actions_per_episode: 100
+trans_noise: 0.02
+orient_noise: 0.05
+z_space: 0.06
+max_force_thresh: 2.0
+max_rotation_thresh: 0.002
+max_displacement_thresh: 0.005
+success_reward: 100
+out_of_bounds_penalty: -100
+probe: true
+
+reward: "6d"
+
+zone:
+  shape: "cyl"
+  center: [0,0,0]
+  radius: 0.03
+  height: 0.5
+  
+orient_scale: 0.1423
+
+action_horizon: 1
+exec_actions: 1
+
+obs_stack: 3
+obs_key: ["task_points", "tool", "force"]
+
+train_steps : 40000 # 666 epochs
+debug: false
+nominal: true
+
