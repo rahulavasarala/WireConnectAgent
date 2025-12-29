@@ -1,4 +1,4 @@
-name: "peginhole_yesforce"
+name: "squarepeg_v2"
 task: "ph"
 alpha: 3.5
 beta: 1
@@ -6,8 +6,8 @@ dist_weight: 1.5
 orient_weight: 0.5
 hz: 15
 actions_per_episode: 100
-trans_noise: 0.02
-orient_noise: 0.05
+trans_noise: 0
+orient_noise: 0
 z_space: 0.06
 max_force_thresh: 2.0
 max_rotation_thresh: 0.002

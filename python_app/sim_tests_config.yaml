@@ -1,10 +1,10 @@
-xml_path: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3peghole_v2.xml"
-action_type: "model"
+xml_path: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/models/scenes/fr3squaresquare.xml"
+action_type: "model_jax" #model, random, model_jax, etc
 
 model: #This is if we need it
-  run_dir: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/python_app/runs"
-  run_name: "peginhole_yesforce"
-  iter: 30
+  run_dir: "/Users/rahulavasarala/Desktop/OpenSai/WireConnectAgent/python_app/runs_jax"
+  run_name: "squarepeg_v1"
+  iter: 0
 
 debug: True
 replay: True

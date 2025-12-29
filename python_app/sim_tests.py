@@ -1,7 +1,8 @@
 from random import Random
 from chex import params_product
 from contact_rich_env import ContactRichEnv
-from policy_network import TransformerAgent
+from policy_network import TransformerAgent, JaxTransformerNetwork, JaxActor, JaxCritic
+import jax.numpy as jnp
 import torch
 import mujoco
 import zmq
@@ -9,9 +10,13 @@ import numpy as np
 import math
 import glfw
 import time
-from utils import params_from_yaml
+from utils import params_from_yaml, get_force_data
 import struct
 from scipy.spatial.transform import Rotation as R
+import optax
+from jax_utils import load_inference_state, AgentParams
+import jax
+
 
 
 launch_params = params_from_yaml("./sim_tests_config.yaml")
@@ -97,20 +102,37 @@ class Simulation():
         run_name = visual_config["model"]["run_name"]
 
         params = params_from_yaml(f"{visual_config["model"]["run_dir"]}/run_{run_name}/experiment_{run_name}.yaml")
-        tool_start_info = np.loadtxt(f"./runs/run_{run_name}/tool_start_info.txt")
+        tool_start_info = np.loadtxt(f"{visual_config["model"]["run_dir"]}/run_{run_name}/tool_start_info.txt")
 
-        self.env = ContactRichEnv([jt_socket, mft_socket, fspf_socket], model=mj_model, data= mj_data, params = params, tool_start_info=tool_start_info)
+        self.env = ContactRichEnv([jt_socket, mft_socket, fspf_socket], model=mj_model, data= mj_data, params = params, tool_start_info= tool_start_info)
         self.debug = visual_config["debug"]
 
         self.env.eval()
-        weights_path = f"{visual_config["model"]["run_dir"]}/run_{run_name}/model{visual_config["model"]["iter"]}.cleanrl_model"
+        self.weights_path = f"{visual_config["model"]["run_dir"]}/run_{run_name}/model{visual_config["model"]["iter"]}.cleanrl_model"
 
-        self.load_model(weights_path = weights_path)
+        self.master_key = jax.random.PRNGKey(42)
+
+        self.set_up_models()
+
+       
         self.target_pos = None
         self.target_orient = None
         self.replay = visual_config["replay"]
 
         self.action_log = []
+
+    def set_up_models(self):
+
+        if self.action_type == "random" or self.action_type == "single_step":
+            return 
+        
+        if self.action_type == "model":
+             self.load_model(weights_path = self.weights_path)
+             return
+        
+        if self.action_type == "model_jax":
+            self.load_jax_model(self.weights_path)
+            return
 
     def reset(self, data):
         self.env.reset(data)
@@ -141,6 +163,17 @@ class Simulation():
             action = np.zeros(7)
             action[0] = 0
             action[2] = -1
+        elif self.action_type == "model_jax":
+            obs = jnp.array(obs)
+            hidden = self.network.apply(
+                self.inference_state.params.network_params,
+                obs,
+            )
+
+            self.master_key, actor_key = jax.random.split(self.master_key, 2)
+            action, _,_,_,_ = self.actor.sample(self.inference_state.params.actor_params, hidden, actor_key)
+            action = np.array(action)
+            action = action.reshape(7,)
             
         return action
 
@@ -150,6 +183,36 @@ class Simulation():
         self.model.load_state_dict(state_dict)
 
         self.model.eval()
+
+    def load_jax_model(self, weights_path):
+
+        self.network = JaxTransformerNetwork(
+            input_dim=self.env.obs_size,
+            output_dim=self.env.obs_size,
+            observation_horizon=self.env.obs_stack,
+            action_dim=7,
+        )
+
+        self.actor = JaxActor(obs_dim=self.env.obs_size, action_dim=7)
+        self.critic = JaxCritic(obs_dim=self.env.obs_size)
+
+        dummy_x = jnp.zeros((1, self.env.obs_size * self.env.obs_stack))
+        dummy_encoded = jnp.zeros((1, self.env.obs_size))
+
+        self.master_key, network_key, actor_key, critic_key = jax.random.split(self.master_key, 4)
+
+        # --- parameter initialization ---
+        network_params = self.network.init(network_key, dummy_x)
+        actor_params   = self.actor.init(actor_key, dummy_encoded)
+        critic_params  = self.critic.init(critic_key, dummy_encoded)
+
+        agent_params = AgentParams(
+            network_params,
+            actor_params,
+            critic_params,
+        )
+
+        self.inference_state = load_inference_state(weights_path, agent_params)
 
     def step(self, data):
 
@@ -166,6 +229,8 @@ class Simulation():
     
     def policy_step(self, data):
         #Create a policy step, and then create a 
+
+        print(f"force being read is: {get_force_data(self.env.model, data, force_dim = -1)}")
 
         for _ in range(17): 
 

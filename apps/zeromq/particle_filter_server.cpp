@@ -25,8 +25,8 @@ using namespace Eigen;
 const std::string zeromq_server = "ipc:///tmp/zmq_fspf_server";
 const std::string yaml_file = "./resources/pfilter_settings.yaml";
 const int ROBOT_INFO = 12;  // motion command (3) + force command (3) + measured velocity (3) + measured force (3)
-const int num_envs = 1;
-int num_workers = 1;
+int NUM_ENVS = 1;
+int NUM_WORKERS = 1;
 
 /*
     YAML file parameters
@@ -115,9 +115,9 @@ Eigen::Vector3d floatPtrToVector3d(const float* data) {
 }
 
 // Preallocate thread-local pfilter instances
-std::vector<std::shared_ptr<WireConnectAgent::ForceSpaceParticleFilter>> pfilter_pool(num_envs);
-std::vector<std::queue<int>> force_dimension_queue(num_envs);
-std::vector<PFilterOutput> pfilter_output(num_envs);
+std::vector<std::shared_ptr<WireConnectAgent::ForceSpaceParticleFilter>> pfilter_pool;
+std::vector<std::queue<int>> force_dimension_queue;
+std::vector<PFilterOutput> pfilter_output;
 
 //------------------------------------------------------------------------------
 void updateParticleFilter(std::shared_ptr<WireConnectAgent::ForceSpaceParticleFilter> pfilter,
@@ -246,8 +246,21 @@ int main() {
 		V_HIGH_ADD = current_node["v_high_add"].as<double>();
 	}
 
+    // Parse YAML parallel config file
+
+    YAML::Node parallel_config = YAML::LoadFile("../../apps/zeromq/parallel_config.yaml");
+
+    NUM_ENVS = parallel_config["NUM_ENVS"].as<int>();
+    NUM_WORKERS = parallel_config["NUM_WORKERS"].as<int>();
+
+    std::cout << "NUM ENVS : " << NUM_ENVS << " NUM_WORKERS : " << NUM_WORKERS << std::endl;
+
+    pfilter_pool.resize(NUM_ENVS);
+    force_dimension_queue.resize(NUM_ENVS);
+    pfilter_output.resize(NUM_ENVS);
+
     // Initialize per-env particle filters
-    for (int i = 0; i < num_envs; ++i) {
+    for (int i = 0; i < NUM_ENVS; ++i) {
         pfilter_pool[i] = std::make_shared<WireConnectAgent::ForceSpaceParticleFilter>(N_PARTICLES);
         pfilter_pool[i]->setParameters(0, 0.025, 0.3, 0.05);  // from paper implementation
         pfilter_pool[i]->setWeightingParameters(F_LOW, F_HIGH, V_LOW, V_HIGH, F_LOW_ADD, F_HIGH_ADD, V_LOW_ADD, V_HIGH_ADD);
@@ -266,12 +279,30 @@ int main() {
         socket.recv(request, zmq::recv_flags::none);
 
         bool reset_filter = false;
-        if (request.size() == sizeof(float)) {
-            std::cout << "Reset particle filter message received\n";
-            reset_filter = true;
 
-            for (auto& pfilter : pfilter_pool) {
-                pfilter->reset();
+        if (request.size() == 0) {
+            std::cerr << "Cannot send nil message!" << std::endl;
+        }
+
+        const float* data = static_cast<const float*>(request.data());
+
+        if (data[0] == 9999) {
+            std::cout << "Reset particle filter message received\n";
+
+            int reset_len = static_cast<int>(request.size()/sizeof(float)) -1;
+
+            if (reset_len > NUM_ENVS) {
+                std::cerr << "Cannot reset more than " << NUM_ENVS << " environments!" << std::endl;
+            }
+
+            for (int i = 0; i < reset_len; i++) {
+                int env_index = static_cast<int>(data[i+1]);
+                if (env_index >= NUM_ENVS || env_index < 0) {
+                    std::cerr << "Cannot reset the " << env_index << " environment(index error)!" << std::endl;
+                    continue;
+                }
+                pfilter_pool[env_index]->reset();
+                std::cout << "Resetting the " << env_index << " environment!" << std::endl;
             }
 
             float filter_output[4];
@@ -280,30 +311,31 @@ int main() {
             socket.send(reply, zmq::send_flags::none);
 
             continue;
-
-        } else if (request.size() != num_envs * ROBOT_INFO * sizeof(float)) {
+        }
+        
+        if (request.size() != NUM_ENVS * ROBOT_INFO * sizeof(float)) {
             std::cerr << "Unexpected message size : " << request.size() << std::endl;
             continue;
         }
 
         const float* force_data = static_cast<const float*>(request.data());
-        float filter_output[num_envs * 4];
+        float filter_output[NUM_ENVS * 4];
 
-        num_workers = std::min(num_workers, num_envs);
+        NUM_WORKERS = std::min(NUM_WORKERS, NUM_ENVS);
 
         std::vector<std::thread> workers;
-        int chunk_size = (num_envs + num_workers - 1) / num_workers;
+        int chunk_size = (NUM_ENVS + NUM_WORKERS - 1) / NUM_WORKERS;
 
-        for (int w = 0; w < num_workers; ++w) {
+        for (int w = 0; w < NUM_WORKERS; ++w) {
             workers.emplace_back([&, w]() {
                 int start = w * chunk_size;
-                int end = std::min(start + chunk_size, num_envs);
+                int end = std::min(start + chunk_size, NUM_ENVS);
                 for (int i = start; i < end; ++i) {
 
-                    const float* motion_control = force_data + i * 3 + 0;
-                    const float* force_control = force_data + i * 3 + 3;
-                    const float* measured_velocity = force_data + i * 3 + 6;
-                    const float* measured_force = force_data + i * 3 + 9;
+                    const float* motion_control = force_data + i * 12;
+                    const float* force_control = motion_control + 3;
+                    const float* measured_velocity = force_control + 3;
+                    const float* measured_force = measured_velocity + 3;
 
                     // update particle filter 
                     updateParticleFilter(pfilter_pool[i], 

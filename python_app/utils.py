@@ -272,8 +272,6 @@ def show_key_points(model, data, tool_points, task_points):
     tool_id = fetch_body_id(model, data, "tool", obj_type = "body")
     tool_pos, tool_orient = fetch_body_pos_orient(data, tool_id)
 
-    print(f"tool pos and orient is: {tool_pos} , {tool_orient}")
-
     tool_points_world = tool_orient @ tool_points + tool_pos.reshape(3,1)
 
     task_id = fetch_body_id(model, data, "task", obj_type = "body")

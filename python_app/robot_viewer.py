@@ -27,6 +27,14 @@ parser.add_argument(
     help='The path to the input file to be processed.'
 )
 
+parser.add_argument(
+    '--keypoints',
+    type=bool,
+    default= False,
+    required=False,
+    help='Whether keypoints should be shown or not'
+)
+
 TEST_MODE = True
 
 ctx = zmq.Context()
@@ -37,6 +45,10 @@ jt_socket.connect("ipc:///tmp/zmq_torque_server")
 args = parser.parse_args()
 
 mj_xml_path = f"../models/scenes/{args.file}"
+
+show_keypoints = args.keypoints
+
+print(f"show keypoints is {show_keypoints}")
 
 
 mj_model = mujoco.MjModel.from_xml_path(mj_xml_path)
@@ -49,7 +61,7 @@ home_key_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_KEY, "home")
 HOME_QPOS = mj_model.key_qpos[home_key_id]
 
 task_tool_module = TaskModule()
-task_points, tool_points = task_tool_module.get_task_tool_points("wc")
+task_points, tool_points = task_tool_module.get_task_tool_points("ph")
 
 
 button_left = False
@@ -116,7 +128,8 @@ def reset_mj_data(data):
     data.qvel[:] = np.zeros(7)
 
     mujoco.mj_step(mj_model, data)
-    data = show_key_points(mj_model, data, tool_points, task_points)
+
+    
 
     return data
 
@@ -159,21 +172,12 @@ def get_position(data):
 
     print(tool_pos)
 
-def get_task_position(data):
-
-    task_id = fetch_body_id(mj_model, data, "task", obj_type = "body")
-    task_pos, task_orient = fetch_body_pos_orient(data, task_id)
-
-    print(task_pos)
-
 def move_to_targets(data, target_pos, target_orient, iterations = 17):
 
     for _ in range(iterations):
         joint_torques = get_joint_torques(data, target_pos , target_orient, jt_socket)
         data.ctrl[:] = joint_torques
         mujoco.mj_step(mj_model, data)
-
-    get_task_position(data)
 
     return data
 
@@ -218,6 +222,9 @@ def main():
 
         if time_elapsed < 1.0/RHZ:
             time.sleep(1.0/RHZ - time_elapsed)
+
+        if show_keypoints:
+            mj_data = show_key_points(mj_model, mj_data, tool_points, task_points)
             
         # Update scene
         mujoco.mjv_updateScene(mj_model, mj_data, scene_option, None, cam, mujoco.mjtCatBit.mjCAT_ALL, scene)

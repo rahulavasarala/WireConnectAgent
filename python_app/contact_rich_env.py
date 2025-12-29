@@ -366,7 +366,7 @@ class ContactRichEnv:
         self.sigmaMotion = np.eye(3)
         self.sigmaForce = np.zeros((3,3))
 
-        data = np.ones(1)
+        data = np.array([9999, 0])
         packed_data = struct.pack('f' * data.shape[-1], *data)
 
         self.fspf_server.send(packed_data)

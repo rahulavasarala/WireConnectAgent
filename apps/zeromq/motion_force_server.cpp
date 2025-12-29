@@ -7,19 +7,20 @@
 #include <Eigen/Dense>
 #include "SaiModel.h"
 #include "SaiPrimitives.h"
+#include <yaml-cpp/yaml.h>
 
 using namespace Eigen;
 
 const std::string zeromq_server = "ipc:///tmp/zmq_motion_force_server";
 const int ROBOT_GRIPPER_JOINTS = 7;
-const int num_envs = 1;
-int num_workers = 1;
+int NUM_ENVS = 1;
+int NUM_WORKERS = 1;
 const string robot_file = std::string(URDF_PATH) + "/scenes/panda_arm.urdf";
 
 // Preallocate thread-local robot instances
-std::vector<std::shared_ptr<SaiModel::SaiModel>> robot_pool(num_envs);
-std::vector<std::shared_ptr<SaiPrimitives::MotionForceTask>> mft_pool(num_envs);
-std::vector<std::shared_ptr<SaiPrimitives::JointTask>> jt_pool(num_envs);
+std::vector<std::shared_ptr<SaiModel::SaiModel>> robot_pool;
+std::vector<std::shared_ptr<SaiPrimitives::MotionForceTask>> mft_pool;
+std::vector<std::shared_ptr<SaiPrimitives::JointTask>> jt_pool;
 
 void updateRobotState(std::shared_ptr<SaiModel::SaiModel> robot,
                       const float* qpos, const float* qvel,
@@ -76,8 +77,24 @@ void compute_robot_joint_torques(std::shared_ptr<SaiModel::SaiModel> robot,
 
 int main() {
     std::cout << "Starting New Motion Force Torque Server ..." << std::endl;
+
+    // Parse YAML parallel config file
+
+    YAML::Node parallel_config = YAML::LoadFile("./apps/zeromq/parallel_config.yaml");
+
+    NUM_ENVS = parallel_config["NUM_ENVS"].as<int>();
+    NUM_WORKERS = parallel_config["NUM_WORKERS"].as<int>();
+
+    std::cout << "NUM ENVS : " << NUM_ENVS << " NUM_WORKERS : " << NUM_WORKERS << std::endl;
+
+    robot_pool.resize(NUM_ENVS);
+    mft_pool.resize(NUM_ENVS);
+    jt_pool.resize(NUM_ENVS);
+
+
+
     // Initialize per-env robots and tasks
-    for (int i = 0; i < num_envs; ++i) {
+    for (int i = 0; i < NUM_ENVS; ++i) {
         robot_pool[i] = std::make_shared<SaiModel::SaiModel>(robot_file, false);
         Vector3d control_point = Vector3d(0, 0, 0.2015);
         Affine3d control_frame = Affine3d::Identity();
@@ -95,29 +112,29 @@ int main() {
         zmq::message_t request;
         socket.recv(request, zmq::recv_flags::none);
 
-        if (request.size() != num_envs * 28 * sizeof(float)) {
-            std::cerr << "Unexpected message size : " << request.size() << std::endl;
+        if (request.size() != NUM_ENVS * 28 * sizeof(float)) {
+            std::cerr << "Unexpected message size : " << request.size() << " " << NUM_ENVS * 28 * sizeof(float)<< std::endl;
             continue;
         }
 
         const float* joint_data = static_cast<const float*>(request.data());
-        float output_torques[num_envs * ROBOT_GRIPPER_JOINTS];
+        float output_torques[NUM_ENVS * ROBOT_GRIPPER_JOINTS];
 
-        num_workers = std::min(num_workers, num_envs);
+        NUM_WORKERS = std::min(NUM_WORKERS, NUM_ENVS);
 
         std::vector<std::thread> workers;
-        int chunk_size = (num_envs + num_workers - 1) / num_workers;
+        int chunk_size = (NUM_ENVS + NUM_WORKERS - 1) / NUM_WORKERS;
 
-        for (int w = 0; w < num_workers; ++w) {
+        for (int w = 0; w < NUM_WORKERS; ++w) {
             workers.emplace_back([&, w]() {
                 int start = w * chunk_size;
-                int end = std::min(start + chunk_size, num_envs);
+                int end = std::min(start + chunk_size, NUM_ENVS);
                 for (int i = start; i < end; ++i) {
-                    const float* pos = joint_data + i *7;
+                    const float* pos = joint_data + i *28;
                     const float* orient = pos + 3;
-                    const float* qpos = joint_data + num_envs*7 + i *7;
-                    const float* qvel = joint_data + num_envs*14 + i *7;
-                    const float* force_or_motion_axis = joint_data + num_envs*21 + i *7;
+                    const float* qpos = orient + 4;
+                    const float* qvel = qpos + 7;
+                    const float* force_or_motion_axis = qvel + 7;
                     const float* force_dim = force_or_motion_axis + 3;
                     const float* desired_force = force_dim + 1;
                 

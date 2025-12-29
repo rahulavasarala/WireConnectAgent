@@ -1,105 +1,284 @@
 import jax.numpy as jnp
 import jax
+import jax.scipy.spatial
+import jax.scipy.spatial.transform
+from jax.scipy.spatial.transform import Rotation as R
+import flax
+import optax
+import msgpack
+from flax import serialization
 
 #This will be the folder with all the utils for jnp
 
 def extract_pos_orient_keypoints(key_points: jnp.ndarray):
+    # Position = mean of the 4 keypoints
+    pos = jnp.mean(key_points, axis=2)  # (NUM_ENVS, 3)
 
-    pos = jnp.mean(key_points, axis = 1)
+    # First column: p0 - p1
+    col0 = key_points[:, :, 0] - key_points[:, :, 1]          # (NUM_ENVS, 3)
+    col0 = col0 / jnp.linalg.norm(col0, axis=1, keepdims=True)
 
-    orient = jnp.zeros((3,3))
+    # Second column: p2 - p1
+    col1 = key_points[:, :, 2] - key_points[:, :, 1]          # (NUM_ENVS, 3)
+    col1 = col1 / jnp.linalg.norm(col1, axis=1, keepdims=True)
 
-    orient[:,0] = key_points[:,0] - key_points[:,1]
-    orient[:, 0] = orient[:, 0]/jnp.linalg.norm(orient[:,0])
-    orient[:,1] = key_points[:,2] - key_points[:,1]
-    orient[:,1] = orient[:,1]/jnp.linalg.norm(orient[:,1])
-    orient[:, 2] = jnp.cross(orient[:,0], orient[:,1]) 
+    # Third column: cross(col0, col1)
+    col2 = jnp.cross(col0, col1, axis=1)                      # (NUM_ENVS, 3)
+
+    # Stack columns into orientation matrix
+    orient = jnp.stack([col0, col1, col2], axis=2)            # (NUM_ENVS, 3, 3)
 
     return pos, orient
 
-def generate_random_sphere_point(subkey):
-    random_point = jax.random.randint(subkey, shape=(3,), minval=-1, maxval=1)
+def create_random_rotations(key, num_envs, orient_noise):
 
+    orient_euler_noise = jax.random.normal(key, (num_envs, 3))
+
+    orient_euler_noise_norm = orient_euler_noise / jnp.linalg.norm(orient_euler_noise, axis=1, keepdims=True)
+    orient_euler_noise_norm = orient_noise * orient_euler_noise_norm
+
+    matrix_noise = R.from_euler("xyz", orient_euler_noise_norm).as_matrix()
+
+    return matrix_noise
+
+def generate_random_sphere_point_jax(subkey):
+    random_point = jax.random.normal(subkey, shape=(3,)) 
     norm_val = jnp.linalg.norm(random_point)
-
-    if norm_val == 0:
-        return jnp.array([0.0, 0.0, 0.0])
-
-    unit_vector = random_point / norm_val
-    return unit_vector
-
-def rotmat_to_quat(R: jnp.ndarray) -> jnp.ndarray:
-    """Convert 3x3 rotation matrix to quaternion [x, y, z, w]."""
-    trace = jnp.trace(R)
-
-    def case1(_):
-        qw = jnp.sqrt(1.0 + trace) / 2.0
-        qx = (R[2, 1] - R[1, 2]) / (4.0 * qw)
-        qy = (R[0, 2] - R[2, 0]) / (4.0 * qw)
-        qz = (R[1, 0] - R[0, 1]) / (4.0 * qw)
-        return jnp.array([qx, qy, qz, qw])
-
-    def case2(_):
-        cond_x = (R[0, 0] > R[1, 1]) & (R[0, 0] > R[2, 2])
-        cond_y = R[1, 1] > R[2, 2]
-
-        def branch_x(_):
-            s = jnp.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2]) * 2.0
-            qw = (R[2, 1] - R[1, 2]) / s
-            qx = 0.25 * s
-            qy = (R[0, 1] + R[1, 0]) / s
-            qz = (R[0, 2] + R[2, 0]) / s
-            return jnp.array([qx, qy, qz, qw])
-
-        def branch_y(_):
-            s = jnp.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2]) * 2.0
-            qw = (R[0, 2] - R[2, 0]) / s
-            qx = (R[0, 1] + R[1, 0]) / s
-            qy = 0.25 * s
-            qz = (R[1, 2] + R[2, 1]) / s
-            return jnp.array([qx, qy, qz, qw])
-
-        def branch_z(_):
-            s = jnp.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1]) * 2.0
-            qw = (R[1, 0] - R[0, 1]) / s
-            qx = (R[0, 2] + R[2, 0]) / s
-            qy = (R[1, 2] + R[2, 1]) / s
-            qz = 0.25 * s
-            return jnp.array([qx, qy, qz, qw])
-
-        return jax.lax.cond(cond_x, branch_x, 
-                            lambda _: jax.lax.cond(cond_y, branch_y, branch_z, None),
-                            None)
-
-    return jax.lax.cond(trace > 0.0, case1, case2, None)
-
-def euler_to_rotmat(euler_angles: jnp.ndarray) -> jnp.ndarray:
-    #Converts 3D Euler angles (Roll, Pitch, Yaw) in radians to a 3x3 rotation matrix.
-    # Unpack angles
-    roll, pitch, yaw = euler_angles[0], euler_angles[1], euler_angles[2]
     
-    # Calculate trigonometric values
-    c_r, s_r = jnp.cos(roll), jnp.sin(roll)    # cos(alpha), sin(alpha)
-    c_p, s_p = jnp.cos(pitch), jnp.sin(pitch)  # cos(beta), sin(beta)
-    c_y, s_y = jnp.cos(yaw), jnp.sin(yaw)      # cos(gamma), sin(gamma)
+    # is_zero should be a scalar boolean here
+    is_zero = norm_val == 0 
     
-    R00 = c_y * c_p
-    R01 = c_y * s_p * s_r - s_y * c_r
-    R02 = c_y * s_p * c_r + s_y * s_r
+    normalized_vec = random_point / norm_val
     
-    R10 = s_y * c_p
-    R11 = s_y * s_p * s_r + c_y * c_r
-    R12 = s_y * s_p * c_r - c_y * s_r
+    # JAX handles broadcasting the scalar condition to the (3,) vector shapes
+    result = jnp.where(
+        is_zero,
+        jnp.array([0.0, 0.0, 0.0]),
+        normalized_vec
+    )
     
-    R20 = -s_p
-    R21 = c_p * s_r
-    R22 = c_p * c_r
-    
+    # Explicitly return the final result as a (3, 1) column vector
+    return result.reshape(3,)
 
-    R = jnp.array([
-        [R00, R01, R02],
-        [R10, R11, R12],
-        [R20, R21, R22]
-    ])
+def dist(tool_key_points: jnp.array , task_key_points: jnp.array, extracted = False, debug = False):
+
+    if not extracted:
+        tool_key_points, _ = extract_pos_orient_keypoints(tool_key_points)
+        task_key_points, _ = extract_pos_orient_keypoints(task_key_points)
+
+    if debug:
+        print(f"tool key points : {tool_key_points}  task key points: {task_key_points}")
+
+    dist = jnp.linalg.norm(tool_key_points - task_key_points, axis = 1)
+
+    return dist # NUM_ENVS
+
+def realize_points_in_frame(points, pos, frame):
+    shifted = points - pos[:, :, None]      
+    frame_T = jnp.transpose(frame, (0,2,1))
+    return jnp.matmul(frame_T, shifted)   
+
+def compute_geodesic_distance_batch(orient1, orient2):
+    arg = (jnp.einsum('bii->b', orient1 @ jnp.transpose(orient2, (0, 2, 1))) - 1) / 2
+
+    arg = jnp.clip(arg, -1.0, 1.0)
+
+    return jnp.arccos(arg)
+
+def continuous_reward_func_batch(a: float, b: float, x: jnp.array):
+    exp_ax = jnp.exp(a * x)
+    exp_neg_ax = jnp.exp(-a * x)
+
+    denominator = b + exp_neg_ax + exp_ax
+
+    r = 2 * (b + 2) * (denominator ** -1) - 1
+    return r
+
+def compute_sigma_masked(fdim: jnp.ndarray,
+                         axes: jnp.ndarray):
+    #fdim (NUM_ENVS, ) axes (NUM_ENVS, 3)
+    B = axes.shape[0]
+
+    # Projection matrix P = a a^T  per env → (B, 3, 3)
+    P = jnp.einsum("bi,bj->bij", axes, axes)
+
+    # Identity per env → (B, 3, 3)
+    I = jnp.tile(jnp.eye(3), (B, 1, 1))
+
+    # Broadcastable masks (B,1,1)
+    m0 = (fdim == 0)[..., None, None]
+    m1 = (fdim == 1)[..., None, None]
+    m2 = (fdim == 2)[..., None, None]
+    m3 = (fdim == 3)[..., None, None]
+
+    # Start from zeros
+    sigmaF = jnp.zeros_like(P)
+    sigmaM = jnp.zeros_like(P)
+
+    # Case 1: fdim == 1 → σ_F = P, σ_M = I - P
+    sigmaF = sigmaF + m1 * P
+    sigmaM = sigmaM + m1 * (I - P)
+
+    # Case 2: fdim == 2 → σ_F = I - P, σ_M = P
+    sigmaF = sigmaF + m2 * (I - P)
+    sigmaM = sigmaM + m2 * P
+
+    # Case 3: fdim == 3 → σ_F = I, σ_M = 0
+    sigmaF = sigmaF + m3 * I
+    # sigmaM unchanged for case 3 (stays 0 there)
+
+    # Case 0: fdim == 0 → σ_F = 0, σ_M = I
+    sigmaM = sigmaM + m0 * I
+
+    return sigmaM, sigmaF
+
+
+def check_out_of_bounds_batch(male_points: jnp.ndarray, zone: dict) -> jnp.ndarray:
     
-    return R
+    center = jnp.array(zone["center"])  # (3,)
+
+    if zone["shape"] == "cyl":
+        in_z_bound = jnp.abs(male_points[:, 2] - center[2]) < (zone["height"]/2)
+
+        delta_xy = male_points[:, :2] - center[:2]
+        in_base = jnp.linalg.norm(delta_xy, axis=1) < zone["radius"]
+        out_of_bounds = ~(in_z_bound & in_base)
+
+    elif zone["shape"] == "sphere":
+        delta = male_points - center
+        dist = jnp.linalg.norm(delta, axis=1)
+        out_of_bounds = dist > zone["radius"]
+
+    else:
+        raise ValueError(f"Unknown zone shape {zone['shape']}")
+
+    return out_of_bounds
+
+class RewardModuleJax():
+
+    def __init__(self, dist_weight, orient_weight,alpha, beta, dist_scale, orient_scale, success_thresh, task_points): 
+
+        self.dist_weight = dist_weight
+        self.orient_weight = orient_weight
+        self.alpha = alpha 
+        self.beta = beta
+        self.dist_scale = dist_scale 
+        self.orient_scale = orient_scale
+        self.success_thresh = success_thresh
+        self.task_points_noise = task_points
+        self.task_pos , self.task_ori = extract_pos_orient_keypoints(self.task_points_noise)
+
+    def batched_reward(self, tool_points, out_of_bounds):
+        pos_tool , ori_tool = extract_pos_orient_keypoints(tool_points)
+
+        angle_rad = compute_geodesic_distance_batch(ori_tool, self.task_ori)
+        dist_batch = dist(pos_tool, self.task_pos, extracted = True)
+
+        dist_norm = dist_batch/self.dist_scale
+        angle_norm = angle_rad/self.orient_scale
+
+        total_error = dist_norm * self.dist_weight + angle_norm * self.orient_weight
+
+        cont_reward = continuous_reward_func_batch(self.alpha, self.beta, total_error)
+
+        success_reward = jnp.zeros(angle_rad.shape[0])
+        success_reward = jnp.where(dist_batch < self.success_thresh, 100 , success_reward)
+
+        oob_penalty = jnp.zeros(success_reward.shape[0])
+        oob_penalty = jnp.where(out_of_bounds, -100, oob_penalty)
+
+        return cont_reward + success_reward + oob_penalty
+
+    
+    def dist(self, tool_key_points, extracted = False):
+
+        if not extracted:
+            tool_key_points, _ = extract_pos_orient_keypoints(tool_key_points)
+            
+
+        dist = jnp.linalg.norm(tool_key_points - self.task_pos, axis = 1)
+
+        return dist
+    
+@flax.struct.dataclass
+class AgentParams:
+    network_params: flax.core.FrozenDict
+    actor_params: flax.core.FrozenDict
+    critic_params: flax.core.FrozenDict
+
+from flax.training import train_state
+
+@flax.struct.dataclass
+class AgentState:
+    params: AgentParams
+    tx: optax.GradientTransformation = flax.struct.field(pytree_node=False)
+    opt_state: optax.OptState
+    step: int = 0
+
+#This is the object which we will use to save the agent state
+@flax.struct.dataclass
+class InferenceState:
+    params: AgentParams
+    step: int = 0   # optional
+
+def create_agent_state(agent_params, tx):
+    opt_state = tx.init(agent_params)
+    return AgentState(
+        params=agent_params,
+        tx=tx,  # now static
+        opt_state=opt_state,
+        step=0,
+    )
+
+def apply_agent_gradients(agent_state: AgentState, grads: AgentParams) -> AgentState:
+    updates, new_opt_state = agent_state.tx.update(
+        grads,
+        agent_state.opt_state,
+        agent_state.params,
+    )
+    new_params = optax.apply_updates(agent_state.params, updates)
+    return agent_state.replace(
+        params=new_params,
+        opt_state=new_opt_state,
+        step=agent_state.step + 1,
+    )
+
+def save_inference_state(path: str, agent_state: AgentState):
+    ckpt = InferenceState(
+        params=agent_state.params,
+        step=agent_state.step,
+    )
+    bytes_out = flax.serialization.to_bytes(ckpt)  # ✅ handles jax.Array
+    with open(path, "wb") as f:
+        f.write(bytes_out)
+
+def load_inference_state(path: str, template_params: AgentParams) -> InferenceState:
+    # IMPORTANT: template must match what was saved (InferenceState)
+    template = InferenceState(params=template_params, step=0)
+
+    with open(path, "rb") as f:
+        bytes_in = f.read()
+
+    return flax.serialization.from_bytes(template, bytes_in)
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    
